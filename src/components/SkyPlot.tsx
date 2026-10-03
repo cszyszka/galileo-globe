@@ -5,14 +5,31 @@ const C = SIZE / 2;
 const R = C - 18;
 const DEG = Math.PI / 180;
 
-const radiusFor = el => ((90 - el) / 90) * R;
+const radiusFor = (el: number) => ((90 - el) / 90) * R;
 
-function toXY(az, el) {
+function toXY(az: number, el: number): [number, number] {
   const r = radiusFor(el);
   return [C + r * Math.sin(az * DEG), C - r * Math.cos(az * DEG)];
 }
 
-export default function SkyPlot({ items, mask, selectedId, onSelect }) {
+export interface SkyItem {
+  id: string;
+  name: string;
+  label: string;
+  az: number;
+  el: number;
+  color: string;
+  hollow: boolean;
+}
+
+interface SkyPlotProps {
+  items: SkyItem[];
+  mask: number;
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+}
+
+export default function SkyPlot({ items, mask, selectedId, onSelect }: SkyPlotProps) {
   return (
     <svg className="gg-skyplot" viewBox={`0 0 ${SIZE} ${SIZE}`} role="img" aria-label="Sky plot of visible satellites">
       <circle cx={C} cy={C} r={R} className="gg-sky-bg" />
@@ -20,7 +37,7 @@ export default function SkyPlot({ items, mask, selectedId, onSelect }) {
       {mask > 0 && <circle cx={C} cy={C} r={radiusFor(mask)} className="gg-sky-mask" />}
       <line x1={C - R} y1={C} x2={C + R} y2={C} className="gg-sky-ring" />
       <line x1={C} y1={C - R} x2={C} y2={C + R} className="gg-sky-ring" />
-      {[['N', 0], ['E', 90], ['S', 180], ['W', 270]].map(([t, az]) => {
+      {([['N', 0], ['E', 90], ['S', 180], ['W', 270]] as const).map(([t, az]) => {
         const [x, y] = [C + (R + 10) * Math.sin(az * DEG), C - (R + 10) * Math.cos(az * DEG)];
         return <text key={t} x={x} y={y} className="gg-sky-cardinal">{t}</text>;
       })}

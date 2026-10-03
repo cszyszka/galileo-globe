@@ -1,3 +1,4 @@
+import type { PointerEvent as ReactPointerEvent } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import * as topojson from 'topojson-client';
@@ -24,6 +25,8 @@ import {
   subsolarPoint,
   footprintRadiusDeg,
 } from '../lib/satellites';
+import type { Constellation, Satellite, StatusCategory, GalileoStatus, GalileoStatusEntry, LonLatR, Vec3, LayerKey } from '../lib/satellites';
+import type { Topology, GeometryCollection } from 'topojson-specification';
 import SkyPlot from './SkyPlot';
 import './GalileoGlobe.css';
 
@@ -42,8 +45,60 @@ const STALE_DATA_MS = 12 * 3600000;
 const ELEVATION_MASKS = [0, 5, 10, 15];
 const COMPASS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
 
-// Service status for a satellite: { category, label, info } where info is the GSC row (Galileo only).
-function healthOf(sat, statusData) {
+interface Observer { lon: number; lat: number }
+
+interface Health {
+  category: StatusCategory;
+  label: string;
+  note?: string;
+  // The GSC row (Galileo only).
+  info?: GalileoStatusEntry;
+}
+
+interface Look { el: number; az: number; range: number; rising: boolean }
+interface SatReadout { lat: number; lon: number; alt: number; speed: number; look?: Look }
+
+interface SourceState {
+  ok: boolean;
+  fetchedAt?: string | null;
+  refreshError?: string | null;
+  message?: string;
+}
+
+interface LoadMeta { status: 'loading' | 'ready' | 'error'; sources: Record<string, SourceState> }
+interface StatusState { state: 'loading' | 'ready' | 'error'; data: GalileoStatus | null; message?: string }
+
+interface UiState {
+  selectedId: string | null;
+  hoverId: string | null;
+  showLabels: boolean;
+  autoRotate: boolean;
+  follow: boolean;
+  visible: Record<string, boolean>;
+  statusData: GalileoStatus | null;
+  showUnusable: boolean;
+  observer: Observer | null;
+  mask: number;
+}
+
+interface ViewState {
+  rot: Vec3;
+  tgt: Vec3;
+  zoom: number;
+  dragging: boolean;
+  wasDrag: boolean;
+  down: [number, number] | null;
+  lastXY: [number, number] | null;
+}
+
+type Country = GeoJSON.Feature<GeoJSON.Geometry, GeoJSON.GeoJsonProperties>;
+type Rotate = (p: [number, number]) => [number, number];
+type Screen = (p: Vec3) => [number, number];
+
+const errorMessage = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+
+// Service status for a satellite; `info` is the GSC row (Galileo only).
+function healthOf(sat: Satellite, statusData: GalileoStatus | null): Health {
   if (sat.constellation !== 'galileo') {
     return { category: 'unknown', label: 'Demonstrator', note: 'In-orbit demonstrator — no public service status' };
   }
@@ -54,17 +109,17 @@ function healthOf(sat, statusData) {
 }
 
 // Rotated unit-sphere cartesian for a lon/lat, scaled by radius (in Earth radii).
-function toView(rotate, lon, lat, r) {
+function toView(rotate: Rotate, lon: number, lat: number, r: number): Vec3 {
   const [l, p] = rotate([lon, lat]);
   const cp = Math.cos(p * DEG);
   return [r * cp * Math.sin(l * DEG), r * Math.sin(p * DEG), r * cp * Math.cos(l * DEG)];
 }
 
-const occluded = ([x, y, z]) => z < 0 && x * x + y * y < 1;
-const lerp3 = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+const occluded = ([x, y, z]: Vec3) => z < 0 && x * x + y * y < 1;
+const lerp3 = (a: Vec3, b: Vec3, t: number): Vec3 => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 
 // Point on segment a→b where visibility flips (a and b have different visibility).
-function limbCrossing(a, b) {
+function limbCrossing(a: Vec3, b: Vec3): Vec3 {
   let lo = 0, hi = 1;
   const aHidden = occluded(a);
   for (let i = 0; i < 8; i++) {
@@ -76,7 +131,7 @@ function limbCrossing(a, b) {
 }
 
 // SVG path through view-space points, skipping the parts hidden behind the Earth disk.
-function visiblePath(pts, screen) {
+function visiblePath(pts: Vec3[], screen: Screen): string {
   let d = '';
   let penDown = false;
   for (let i = 0; i < pts.length; i++) {
@@ -96,29 +151,29 @@ function visiblePath(pts, screen) {
   return d;
 }
 
-const ecef = (lon, lat, r = 1) => {
+const ecef = (lon: number, lat: number, r = 1): Vec3 => {
   const cl = Math.cos(lat * DEG);
   return [r * cl * Math.cos(lon * DEG), r * cl * Math.sin(lon * DEG), r * Math.sin(lat * DEG)];
 };
 
 // Elevation (deg) of a satellite at [lon, lat, radiusKm] above an observer's horizon
 // (spherical Earth — close enough for drawing; the panel uses satellite.js look angles).
-function elevationDeg(observer, [lon, lat, r]) {
+function elevationDeg(observer: Observer, [lon, lat, r]: LonLatR): number {
   const o = ecef(observer.lon, observer.lat);
   const sv = ecef(lon, lat, r / EARTH_RADIUS_KM);
-  const d = [sv[0] - o[0], sv[1] - o[1], sv[2] - o[2]];
+  const d: Vec3 = [sv[0] - o[0], sv[1] - o[1], sv[2] - o[2]];
   return Math.asin((d[0] * o[0] + d[1] * o[1] + d[2] * o[2]) / Math.hypot(...d)) / DEG;
 }
 
-function formatUtc(d) {
+function formatUtc(d: Date): string {
   return d.toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
 }
 
-function formatLatLon(lat, lon) {
+function formatLatLon(lat: number, lon: number): string {
   return `${Math.abs(lat).toFixed(1)}°${lat >= 0 ? 'N' : 'S'} ${Math.abs(lon).toFixed(1)}°${lon >= 0 ? 'E' : 'W'}`;
 }
 
-function SatDetails({ sat, health, readout, mask }) {
+function SatDetails({ sat, health, readout, mask }: { sat: Satellite; health: Health; readout?: SatReadout; mask: number }) {
   return (
     <div className="gg-detail" style={{ borderColor: sat.color }}>
       <div className="gg-status-row">
@@ -163,29 +218,29 @@ function SatDetails({ sat, health, readout, mask }) {
 }
 
 export default function GalileoGlobe() {
-  const stageRef = useRef(null);
-  const svgRef = useRef(null);
-  const panelRef = useRef(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
 
-  const [sats, setSats] = useState([]);
-  const [meta, setMeta] = useState({ status: 'loading', sources: {} });
-  const [visible, setVisible] = useState(() => Object.fromEntries(LAYERS.map(l => [l.key, true])));
-  const [status, setStatus] = useState({ state: 'loading', data: null });
+  const [sats, setSats] = useState<Satellite[]>([]);
+  const [meta, setMeta] = useState<LoadMeta>({ status: 'loading', sources: {} });
+  const [visible, setVisible] = useState<Record<LayerKey, boolean>>(() => Object.fromEntries(LAYERS.map(l => [l.key, true])) as Record<LayerKey, boolean>);
+  const [status, setStatus] = useState<StatusState>({ state: 'loading', data: null });
   const [showUnusable, setShowUnusable] = useState(true);
-  const [selectedId, setSelectedId] = useState(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [speed, setSpeed] = useState(1);
   const [showLabels, setShowLabels] = useState(false);
   const [autoRotate, setAutoRotate] = useState(true);
   const [follow, setFollow] = useState(false);
-  const [readout, setReadout] = useState({ time: new Date(), bySat: {} });
-  const [observer, setObserver] = useState(null);
+  const [readout, setReadout] = useState<{ time: Date; bySat: Record<string, SatReadout> }>({ time: new Date(), bySat: {} });
+  const [observer, setObserver] = useState<Observer | null>(null);
   const [mask, setMask] = useState(10);
-  const [geoError, setGeoError] = useState(null);
+  const [geoError, setGeoError] = useState<string | null>(null);
 
   const clock = useRef({ anchorReal: Date.now(), anchorSim: Date.now(), speed: 1 });
-  const view = useRef({ rot: [-10, -25, 0], tgt: [-10, -25, 0], zoom: 1, dragging: false, down: null, lastXY: null });
-  const ui = useRef({ selectedId: null, hoverId: null, showLabels: false, autoRotate: true, follow: false, visible: {}, statusData: null, showUnusable: true, observer: null, mask: 10 });
-  const positions = useRef({});
+  const view = useRef<ViewState>({ rot: [-10, -25, 0], tgt: [-10, -25, 0], zoom: 1, dragging: false, wasDrag: false, down: null, lastXY: null });
+  const ui = useRef<UiState>({ selectedId: null, hoverId: null, showLabels: false, autoRotate: true, follow: false, visible: {}, statusData: null, showUnusable: true, observer: null, mask: 10 });
+  const positions = useRef<{ date?: Date; pos?: Record<string, LonLatR> }>({});
 
   useEffect(() => {
     Object.assign(ui.current, { selectedId, showLabels, autoRotate, follow, visible, statusData: status.data, showUnusable, observer, mask });
@@ -196,7 +251,7 @@ export default function GalileoGlobe() {
     return c.anchorSim + (Date.now() - c.anchorReal) * c.speed;
   }, []);
 
-  const changeSpeed = (s, resetToNow = false) => {
+  const changeSpeed = (s: number, resetToNow = false) => {
     const now = Date.now();
     clock.current = { anchorReal: now, anchorSim: resetToNow ? now : simNow(), speed: s };
     setSpeed(s);
@@ -206,7 +261,7 @@ export default function GalileoGlobe() {
   // when the orbit data actually changed.
   useEffect(() => {
     let cancelled = false;
-    let lastTleKey = null;
+    let lastTleKey: string | null = null;
     const keys = Object.keys(SOURCES);
 
     const load = async () => {
@@ -219,22 +274,22 @@ export default function GalileoGlobe() {
       const refresh = dataMeta.status === 'fulfilled' ? dataMeta.value.sources ?? {} : {};
 
       // Sources load independently, so one failing doesn't hide the other.
-      const sources = {};
-      const texts = [];
+      const sources: Record<string, SourceState> = {};
+      const texts: string[] = [];
       tleResults.forEach((r, i) => {
-        const info = refresh[`tle-${keys[i]}`] ?? {};
+        const info = refresh[`tle-${keys[i]}`] ?? ({} as Partial<(typeof refresh)[string]>);
         if (r.status === 'fulfilled') {
           texts.push(r.value);
           sources[keys[i]] = { ok: true, fetchedAt: info.fetchedAt ?? null, refreshError: info.error ?? null };
         } else {
           texts.push('');
-          sources[keys[i]] = { ok: false, message: r.reason?.message ?? String(r.reason) };
+          sources[keys[i]] = { ok: false, message: errorMessage(r.reason) };
         }
       });
       const tleKey = texts.join('\n');
       if (tleKey !== lastTleKey) {
         lastTleKey = tleKey;
-        const all = keys.flatMap((k, i) => (texts[i] ? parseTle(texts[i], k) : []));
+        const all = keys.flatMap((k, i) => (texts[i] ? parseTle(texts[i], k as Constellation) : []));
         setSats(sortSats(all));
         setMeta({ status: all.length ? 'ready' : 'error', sources });
       } else {
@@ -244,7 +299,7 @@ export default function GalileoGlobe() {
       if (statusResult.status === 'fulfilled') {
         setStatus({ state: 'ready', data: statusResult.value });
       } else {
-        const message = statusResult.reason?.message ?? String(statusResult.reason);
+        const message = errorMessage(statusResult.reason);
         setStatus(prev => (prev.data ? prev : { state: 'error', data: null, message }));
       }
     };
@@ -257,12 +312,12 @@ export default function GalileoGlobe() {
   // Scene
   useEffect(() => {
     if (!sats.length) return;
-    let raf = null;
+    let raf: number | null = null;
     let mounted = true;
     const v = view.current;
     const size = { w: 800, h: 800 };
 
-    const svg = d3.select(svgRef.current);
+    const svg = d3.select(svgRef.current!);
     svg.selectAll('*').remove();
 
     const defs = svg.append('defs');
@@ -289,12 +344,12 @@ export default function GalileoGlobe() {
     const satGroup = svg.append('g');
     const labelGroup = svg.append('g').attr('font-size', 11).attr('font-family', 'ui-monospace, SFMono-Regular, Menlo, monospace');
 
-    const orbitPaths = orbitGroup.selectAll('path').data(sats, d => d.id).enter().append('path')
+    const orbitPaths = orbitGroup.selectAll<SVGPathElement, Satellite>('path').data(sats, d => d.id).enter().append('path')
       .attr('stroke', d => d.color).attr('stroke-linecap', 'round');
-    const sightLines = sightGroup.selectAll('path').data(sats, d => d.id).enter().append('path')
+    const sightLines = sightGroup.selectAll<SVGPathElement, Satellite>('path').data(sats, d => d.id).enter().append('path')
       .attr('stroke', d => d.color);
 
-    const satNodes = satGroup.selectAll('g').data(sats, d => d.id).enter().append('g')
+    const satNodes = satGroup.selectAll<SVGGElement, Satellite>('g').data(sats, d => d.id).enter().append('g')
       .attr('class', 'gg-sat')
       .on('mouseenter', (_, d) => { ui.current.hoverId = d.id; })
       .on('mouseleave', () => { ui.current.hoverId = null; })
@@ -306,33 +361,34 @@ export default function GalileoGlobe() {
     satNodes.append('circle').attr('class', 'ring').attr('r', 10).attr('fill', 'none').attr('stroke', d => d.color).attr('stroke-width', 1.2);
     satNodes.append('circle').attr('class', 'dot').attr('r', 4.5).attr('fill', d => d.color).attr('stroke', '#050e1a').attr('stroke-width', 1.5);
 
-    const labels = labelGroup.selectAll('text').data(sats, d => d.id).enter().append('text')
+    const labels = labelGroup.selectAll<SVGTextElement, Satellite>('text').data(sats, d => d.id).enter().append('text')
       .attr('fill', d => d.color).attr('paint-order', 'stroke').attr('stroke', '#050e1a').attr('stroke-width', 3)
       .text(d => d.short);
 
     const proj = d3.geoOrthographic();
     const pathGen = d3.geoPath(proj);
     const graticule = d3.geoGraticule10();
-    let land = null;
+    let land: d3.Selection<SVGPathElement, Country, SVGGElement, unknown> | null = null;
 
     fetch(countriesUrl)
       .then(r => r.json())
-      .then(world => {
+      .then((world: Topology) => {
         if (!mounted) return;
-        land = landGroup.selectAll('path')
-          .data(topojson.feature(world, world.objects.countries).features)
+        const countries = topojson.feature(world, world.objects.countries as GeometryCollection);
+        land = landGroup.selectAll<SVGPathElement, Country>('path')
+          .data(countries.features as Country[])
           .enter().append('path')
           .attr('fill', '#163355').attr('stroke', '#3a7aa0').attr('stroke-width', 0.5);
       })
       .catch(() => { /* coastlines are decorative */ });
 
     // Orbit rings are sampled once in inertial space and rotated by GMST each frame.
-    let orbits = null;
+    let orbits: Map<string, Vec3[]> | null = null;
     let orbitsSampledAt = -Infinity;
-    let track = null;
+    let track: GeoJSON.LineString | null = null;
     let trackKey = '';
     let trackUpdatedAt = 0;
-    let geom = null;
+    let geom: { cx: number; cy: number; R: number } | null = null;
 
     const resize = () => {
       const el = stageRef.current;
@@ -343,7 +399,7 @@ export default function GalileoGlobe() {
     };
     resize();
     const ro = new ResizeObserver(resize);
-    ro.observe(stageRef.current);
+    ro.observe(stageRef.current!);
 
     const frame = () => {
       if (!mounted) return;
@@ -354,8 +410,8 @@ export default function GalileoGlobe() {
       const date = new Date(now);
       const gmst = gstime(date);
       const u = ui.current;
-      const unusable = s => healthOf(s, u.statusData).category === 'bad';
-      const shown = s => u.visible[s.layer] !== false && (u.showUnusable || !unusable(s));
+      const unusable = (s: Satellite) => healthOf(s, u.statusData).category === 'bad';
+      const shown = (s: Satellite) => u.visible[s.layer] !== false && (u.showUnusable || !unusable(s));
 
       if (Math.abs(now - orbitsSampledAt) > ORBIT_RESAMPLE_MS) {
         orbits = new Map(sats.map(s => [s.id, sampleOrbit(s, date, ORBIT_STEPS)]));
@@ -363,7 +419,7 @@ export default function GalileoGlobe() {
       }
 
       // Current satellite positions (Earth-fixed lon/lat/radius)
-      const pos = {};
+      const pos: Record<string, LonLatR> = {};
       for (const s of sats) {
         const pv = eciAt(s, date);
         if (pv) pos[s.id] = eciToLonLatR([pv.position.x, pv.position.y, pv.position.z], gmst);
@@ -387,7 +443,7 @@ export default function GalileoGlobe() {
       proj.scale(R).translate([cx, cy]).rotate(v.rot);
       geom = { cx, cy, R };
       const rotate = d3.geoRotation(v.rot);
-      const screen = p => [cx + R * p[0], cy - R * p[1]];
+      const screen: Screen = p => [cx + R * p[0], cy - R * p[1]];
 
       // Earth
       const atmoR = R * (1 + ATMOSPHERE_KM / EARTH_RADIUS_KM);
@@ -396,7 +452,7 @@ export default function GalileoGlobe() {
       atmosphere.attr('cx', cx).attr('cy', cy).attr('r', atmoR);
       ocean.attr('cx', cx).attr('cy', cy).attr('r', R);
       graticulePath.attr('d', pathGen(graticule));
-      if (land) land.attr('d', pathGen);
+      if (land) land.attr('d', d => pathGen(d));
       const [sunLon, sunLat] = subsolarPoint(date);
       nightPath.attr('d', pathGen(d3.geoCircle().center([sunLon + 180, -sunLat]).radius(90)()));
 
@@ -405,7 +461,7 @@ export default function GalileoGlobe() {
         footprintPath.attr('d', pathGen(d3.geoCircle().center([sel[0], sel[1]]).radius(footprintRadiusDeg(sel[2], u.mask))()))
           .attr('fill', selSat.color).attr('stroke', selSat.color);
         if (trackKey !== selSat.id || Math.abs(performance.now() - trackUpdatedAt) > 500) {
-          const coords = [];
+          const coords: [number, number][] = [];
           const steps = 200;
           for (let i = 0; i <= steps; i++) {
             const t = new Date(now + (i / steps) * selSat.periodMin * 60000);
@@ -419,7 +475,7 @@ export default function GalileoGlobe() {
           trackKey = selSat.id;
           trackUpdatedAt = performance.now();
         }
-        trackPath.attr('d', pathGen(track)).attr('stroke', selSat.color);
+        trackPath.attr('d', track ? pathGen(track) : null).attr('stroke', selSat.color);
       } else {
         footprintPath.attr('d', null);
         trackPath.attr('d', null);
@@ -427,7 +483,7 @@ export default function GalileoGlobe() {
 
       // Orbits — only the parts not hidden behind the Earth disk
       orbitPaths.each(function (s) {
-        const pts = orbits.get(s.id).map(p => {
+        const pts = (orbits?.get(s.id) ?? []).map(p => {
           const [lon, lat, r] = eciToLonLatR(p, gmst);
           return toView(rotate, lon, lat, r / EARTH_RADIUS_KM);
         });
@@ -441,7 +497,7 @@ export default function GalileoGlobe() {
       });
 
       // Satellites & labels
-      const screenPos = {};
+      const screenPos: Record<string, { xy: [number, number]; hidden: boolean; behind: boolean }> = {};
       for (const s of sats) {
         const p = pos[s.id];
         if (!p || !shown(s)) continue;
@@ -488,8 +544,8 @@ export default function GalileoGlobe() {
       }
       sightLines.each(function (s) {
         const p = pos[s.id];
-        let d = null;
-        if (obs && p && shown(s) && elevationDeg(obs, p) >= u.mask) {
+        let d: string | null = null;
+        if (vo && obs && p && shown(s) && elevationDeg(obs, p) >= u.mask) {
           const vs = toView(rotate, p[0], p[1], p[2] / EARTH_RADIUS_KM);
           const pts = d3.range(17).map(i => lerp3(vo, vs, i / 16));
           d = visiblePath(pts, screen) || null;
@@ -510,18 +566,18 @@ export default function GalileoGlobe() {
       if (v.wasDrag || !geom) return;
       const [x, y] = d3.pointer(e, svg.node());
       if (Math.hypot(x - geom.cx, y - geom.cy) <= geom.R) {
-        const [lon, lat] = proj.invert([x, y]);
-        setObserver({ lon, lat });
+        const inv = proj.invert?.([x, y]);
+        if (inv) setObserver({ lon: inv[0], lat: inv[1] });
       } else {
         setSelectedId(null);
       }
     });
 
-    const onWheel = e => {
+    const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       v.zoom = Math.min(5, Math.max(0.5, v.zoom * Math.exp(-e.deltaY * 0.0015)));
     };
-    const el = svgRef.current;
+    const el = svgRef.current!;
     el.addEventListener('wheel', onWheel, { passive: false });
 
     return () => {
@@ -538,7 +594,7 @@ export default function GalileoGlobe() {
     const tick = () => {
       const date = new Date(simNow());
       const gmst = gstime(date);
-      const bySat = {};
+      const bySat: Record<string, SatReadout> = {};
       const site = observer && { latitude: observer.lat * DEG, longitude: observer.lon * DEG, height: 0 };
       const later = new Date(date.getTime() + 60000);
       const gmstLater = gstime(later);
@@ -573,13 +629,14 @@ export default function GalileoGlobe() {
 
   // Drag to rotate. Pointer capture starts only once the pointer actually moves,
   // so clicks on satellites still reach them.
-  const onPointerDown = e => {
+  const onPointerDown = (e: ReactPointerEvent<SVGSVGElement>) => {
     view.current.down = [e.clientX, e.clientY];
     view.current.lastXY = [e.clientX, e.clientY];
   };
-  const onPointerMove = e => {
+  const onPointerMove = (e: ReactPointerEvent<SVGSVGElement>) => {
     const v = view.current;
     if (!v.down) return;
+    if (!v.lastXY) return;
     if (!v.dragging) {
       if (Math.hypot(e.clientX - v.down[0], e.clientY - v.down[1]) < 4) return;
       v.dragging = true;
@@ -599,7 +656,7 @@ export default function GalileoGlobe() {
     v.lastXY = null;
   };
 
-  const focusOn = id => {
+  const focusOn = (id: string) => {
     setSelectedId(id);
     const p = positions.current.pos?.[id];
     if (p) {
@@ -610,7 +667,7 @@ export default function GalileoGlobe() {
   };
 
   const groups = useMemo(() => {
-    const g = GROUP_NAMES.map(() => []);
+    const g: Satellite[][] = GROUP_NAMES.map(() => []);
     for (const s of sats) g[s.plane].push(s);
     return g;
   }, [sats]);
@@ -625,8 +682,8 @@ export default function GalileoGlobe() {
   }, [sats, status.data]);
 
   // Keep the previously selected row's details mounted while it slides shut.
-  const [prevSelectedId, setPrevSelectedId] = useState(null);
-  const [closingId, setClosingId] = useState(null);
+  const [prevSelectedId, setPrevSelectedId] = useState<string | null>(null);
+  const [closingId, setClosingId] = useState<string | null>(null);
   if (prevSelectedId !== selectedId) {
     setPrevSelectedId(selectedId);
     setClosingId(prevSelectedId);
@@ -645,9 +702,13 @@ export default function GalileoGlobe() {
   // Satellites above the observer's elevation mask, highest first
   const inView = observer
     ? sats
-      .map(s => ({ s, look: readout.bySat[s.id]?.look, health: healthOf(s, status.data) }))
-      .filter(({ s, look, health }) =>
-        look && look.el >= mask && visible[s.layer] && (showUnusable || health.category !== 'bad'))
+      .flatMap(s => {
+        const look = readout.bySat[s.id]?.look;
+        const health = healthOf(s, status.data);
+        return look && look.el >= mask && visible[s.layer] && (showUnusable || health.category !== 'bad')
+          ? [{ s, look, health }]
+          : [];
+      })
       .sort((a, b) => b.look.el - a.look.el)
     : [];
   const usableGalileoInView = inView.filter(x => x.s.constellation === 'galileo' && x.health.category === 'ok').length;
@@ -872,7 +933,7 @@ export default function GalileoGlobe() {
             <h2>
               <span className="gg-dot" style={{ background: GROUP_COLORS[plane] }} />
               {GROUP_NAMES[plane]}
-              <span className="gg-muted"> · {list.length} sats{plane < 3 ? ` · RAAN ≈ ${Math.round(d3.mean(list, s => s.raan))}°` : ''}</span>
+              <span className="gg-muted"> · {list.length} sats{plane < 3 ? ` · RAAN ≈ ${Math.round(d3.mean(list, s => s.raan) ?? 0)}°` : ''}</span>
             </h2>
             <ul className="gg-list">
               {list.map(s => {
