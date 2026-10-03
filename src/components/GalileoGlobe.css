@@ -1,0 +1,469 @@
+.gg-root {
+  display: flex;
+  height: 100vh;
+  background: #050e1a;
+  color: #cbd5e1;
+  font-size: 13px;
+}
+
+.gg-stage {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.gg-stage svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.gg-stage svg:active {
+  cursor: grabbing;
+}
+
+.gg-sat {
+  cursor: pointer;
+}
+
+.gg-overlay {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  pointer-events: none;
+}
+
+.gg-overlay h1 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #e2e8f0;
+  letter-spacing: 0.01em;
+}
+
+.gg-clock {
+  margin-top: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gg-live,
+.gg-sim {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+
+.gg-live {
+  color: #052e16;
+  background: #34d399;
+}
+
+.gg-sim {
+  color: #1e1b4b;
+  background: #a5b4fc;
+}
+
+.gg-note {
+  margin-top: 8px;
+  color: #94a3b8;
+}
+
+.gg-error {
+  color: #fca5a5;
+}
+
+.gg-hint {
+  position: absolute;
+  bottom: 12px;
+  left: 16px;
+  color: #475569;
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.gg-panel {
+  width: 340px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  padding: 16px;
+  background: #071425;
+  border-left: 1px solid #12263d;
+}
+
+.gg-panel section {
+  margin-bottom: 18px;
+}
+
+.gg-panel h2 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #e2e8f0;
+}
+
+.gg-panel h2 .gg-muted {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+
+.gg-panel label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  cursor: pointer;
+}
+
+.gg-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.gg-panel button {
+  font: inherit;
+  color: inherit;
+  background: #0d1f35;
+  border: 1px solid #1a3a5c;
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.gg-panel button:hover:not(:disabled) {
+  border-color: #3a7aa0;
+}
+
+.gg-panel button.active {
+  background: #1e3a5f;
+  border-color: #60a5fa;
+  color: #e2e8f0;
+}
+
+.gg-panel button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.gg-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.gg-muted {
+  color: #64748b;
+}
+
+.gg-small {
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.gg-list {
+  list-style: none;
+  padding: 0;
+}
+
+.gg-list button {
+  display: grid;
+  grid-template-columns: 9px 78px 1fr auto;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border-color: transparent;
+  padding: 3px 6px;
+}
+
+.gg-name {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #e2e8f0;
+}
+
+.gg-pos {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: #94a3b8;
+  font-variant-numeric: tabular-nums;
+}
+
+.gg-detail {
+  margin: 4px 0 10px 23px;
+  border: 1px solid;
+  border-left-width: 3px;
+  border-radius: 8px;
+  padding: 12px;
+  background: #0a1a2e;
+}
+
+/* Details slide open below the selected row */
+.gg-expand {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 280ms ease;
+}
+
+.gg-expand.open {
+  grid-template-rows: 1fr;
+}
+
+.gg-expand-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.gg-expand-inner > .gg-detail {
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: opacity 220ms ease, transform 280ms ease;
+}
+
+.gg-expand.open .gg-detail {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gg-expand,
+  .gg-expand-inner > .gg-detail {
+    transition: none;
+  }
+}
+
+.gg-detail dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  margin-bottom: 8px;
+}
+
+.gg-detail dt {
+  color: #64748b;
+}
+
+.gg-detail dd {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  color: #e2e8f0;
+}
+
+@media (max-width: 800px) {
+  .gg-root {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .gg-stage {
+    height: 75vh;
+    flex: none;
+  }
+
+  .gg-panel {
+    width: auto;
+    border-left: none;
+    border-top: 1px solid #12263d;
+  }
+}
+
+.gg-hollow {
+  background: transparent;
+  border: 2px solid;
+}
+
+.gg-status-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-bottom: 6px;
+}
+
+.gg-status-summary > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gg-status-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.gg-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 1px 7px;
+  border: 1px solid;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.gg-nagu {
+  margin-bottom: 10px;
+  color: #cbd5e1;
+}
+
+.gg-panel a {
+  color: #93c5fd;
+}
+
+/* Visible-from-location section */
+.gg-observer-coords {
+  margin-left: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: #cbd5e1;
+}
+
+.gg-observer-hint {
+  margin-bottom: 8px;
+}
+
+.gg-mask {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.gg-mask button {
+  padding: 2px 8px;
+}
+
+.gg-visible-summary {
+  margin-bottom: 6px;
+  line-height: 1.5;
+}
+
+.gg-visible-summary strong {
+  color: #e2e8f0;
+}
+
+.gg-fix-ok {
+  color: #34d399;
+}
+
+.gg-fix-no {
+  color: #fbbf24;
+}
+
+.gg-skyplot {
+  display: block;
+  width: 100%;
+  max-width: 240px;
+  margin: 4px auto 10px;
+  overflow: visible;
+}
+
+.gg-sky-bg {
+  fill: #0a1a2e;
+  stroke: #1a3a5c;
+}
+
+.gg-sky-ring {
+  fill: none;
+  stroke: #1a3a5c;
+  stroke-width: 0.8;
+}
+
+.gg-sky-mask {
+  fill: none;
+  stroke: #fbbf24;
+  stroke-opacity: 0.5;
+  stroke-dasharray: 3 3;
+}
+
+.gg-sky-cardinal {
+  fill: #94a3b8;
+  font-size: 10px;
+  font-weight: 600;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+.gg-sky-tick {
+  fill: #475569;
+  font-size: 8px;
+}
+
+.gg-sky-label {
+  font-size: 9px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  paint-order: stroke;
+  stroke: #0a1a2e;
+  stroke-width: 3px;
+}
+
+.gg-sky-sat {
+  cursor: pointer;
+}
+
+.gg-visible-list button,
+.gg-visible-head {
+  grid-template-columns: 9px 72px 1fr 1fr auto;
+  gap: 6px;
+}
+
+.gg-visible-list .gg-pos {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.gg-visible-head {
+  display: grid;
+  gap: 8px;
+  padding: 0 6px 2px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.gg-visible-head span:nth-child(n + 3) {
+  text-align: right;
+}
+
+.gg-rising,
+.gg-setting {
+  display: inline-block;
+  width: 10px;
+  margin-left: 2px;
+}
+
+.gg-rising {
+  color: #34d399;
+}
+
+.gg-setting {
+  color: #fbbf24;
+}
+
+.gg-observer-actions {
+  margin-top: 8px;
+}
+
+.gg-layer-count {
+  margin-left: auto;
+}
