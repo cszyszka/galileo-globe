@@ -1,16 +1,79 @@
-import { twoline2satrec, propagate, gstime } from 'satellite.js';
+import { twoline2satrec, propagate, gstime, type SatRec, type EciVec3 } from 'satellite.js';
 import { TLE_SOURCES } from './sources.js';
+
+export type Constellation = 'galileo' | 'leopnt';
+export type LayerKey = 'galileo' | 'galileoElliptical' | 'leopnt';
+export type StatusCategory = 'ok' | 'bad' | 'testing' | 'unknown';
+export type LonLatR = [lon: number, lat: number, radiusKm: number];
+
+export interface Satellite {
+  id: string;
+  constellation: Constellation;
+  name: string;
+  short: string;
+  alias: string;
+  satrec: SatRec;
+  inclination: number;
+  raan: number;
+  eccentricity: number;
+  periodMin: number;
+  epoch: Date;
+  plane: number;
+  elliptical: boolean;
+  color: string;
+  layer: LayerKey;
+}
+
+export interface SourceMeta {
+  file: string;
+  url: string;
+  fetchedAt: string;
+  count?: number;
+  warnings?: string[];
+  error?: string;
+}
+
+export interface DataMeta {
+  sources: Record<string, SourceMeta>;
+}
+
+export interface Nagu {
+  id: string;
+  type?: string;
+  subject?: string;
+  url?: string;
+}
+
+export interface GalileoStatusEntry {
+  svid: string;
+  clock?: string;
+  status: string;
+  nagu: Nagu | null;
+}
+
+export interface GalileoStatus {
+  source: string;
+  fetchedAt: string;
+  satellites: Record<string, GalileoStatusEntry>;
+}
+
+export interface Eci {
+  position: EciVec3<number>;
+  velocity: EciVec3<number>;
+}
+
+export type Vec3 = [number, number, number];
 
 export const EARTH_RADIUS_KM = 6371;
 
-export const SOURCES = TLE_SOURCES;
+export const SOURCES: Record<string, { label: string; url: string; file: string }> = TLE_SOURCES;
 
 // Group indices used for colouring and the side-panel sections.
 export const GROUP_NAMES = ['Galileo plane 1', 'Galileo plane 2', 'Galileo plane 3', 'Galileo elliptical orbit', 'LEO-PNT (Celeste)'];
 
 // Display layers that can be toggled independently. The two Galileo satellites stranded in
 // an elliptical orbit are split from the nominal constellation.
-export const LAYERS = [
+export const LAYERS: { key: LayerKey; label: string; note?: string }[] = [
   { key: 'galileo', label: 'Galileo', note: 'excl. elliptical' },
   { key: 'galileoElliptical', label: 'Galileo elliptical' },
   { key: 'leopnt', label: 'LEO-PNT (Celeste)' },
@@ -24,14 +87,14 @@ const ECCENTRIC_GROUP = 3;
 // so a long-open page picks up new data after the site is redeployed.
 const DATA_URL = `${import.meta.env.BASE_URL}data/`;
 
-async function fetchData(file) {
+async function fetchData(file: string): Promise<Response> {
   const res = await fetch(DATA_URL + file, { cache: 'no-cache' });
   if (!res.ok) throw new Error(`${file}: HTTP ${res.status}`);
   return res;
 }
 
 // When each data file was fetched, and any error from the latest refresh attempt.
-export async function loadDataMeta() {
+export async function loadDataMeta(): Promise<DataMeta> {
   try {
     return await (await fetchData('meta.json')).json();
   } catch {
@@ -39,18 +102,18 @@ export async function loadDataMeta() {
   }
 }
 
-export async function loadTle(sourceKey) {
+export async function loadTle(sourceKey: string): Promise<string> {
   return (await fetchData(SOURCES[sourceKey].file)).text();
 }
 
 // Official Galileo per-satellite status from the European GNSS Service Centre.
-export async function loadGalileoStatus() {
+export async function loadGalileoStatus(): Promise<GalileoStatus> {
   return (await fetchData('galileo-status.json')).json();
 }
 
-export const STATUS_COLORS = { ok: '#34d399', bad: '#f87171', testing: '#fbbf24', unknown: '#64748b' };
+export const STATUS_COLORS: Record<StatusCategory, string> = { ok: '#34d399', bad: '#f87171', testing: '#fbbf24', unknown: '#64748b' };
 
-export function statusCategory(status) {
+export function statusCategory(status?: string): StatusCategory {
   if (!status) return 'unknown';
   if (status === 'USABLE') return 'ok';
   if (status.startsWith('NOT ')) return 'bad';
@@ -58,9 +121,9 @@ export function statusCategory(status) {
   return 'unknown';
 }
 
-export function parseTle(text, constellation) {
+export function parseTle(text: string, constellation: Constellation): Satellite[] {
   const lines = text.split(/\r?\n/).map(l => l.trimEnd()).filter(Boolean);
-  const sats = [];
+  const sats: Satellite[] = [];
   for (let i = 0; i + 2 < lines.length; i++) {
     const [name, l1, l2] = [lines[i].trim(), lines[i + 1], lines[i + 2]];
     if (!l1.startsWith('1 ') || !l2.startsWith('2 ')) continue;
@@ -69,6 +132,10 @@ export function parseTle(text, constellation) {
     const match = name.match(/^(\S+)\s*\((.+)\)$/);
     sats.push({
       id: satrec.satnum,
+      plane: 0,
+      elliptical: false,
+      color: '',
+      layer: constellation,
       constellation,
       name,
       short: match ? match[1] : name,
@@ -93,18 +160,18 @@ export function parseTle(text, constellation) {
   return sats;
 }
 
-export function sortSats(sats) {
+export function sortSats(sats: Satellite[]): Satellite[] {
   return [...sats].sort((a, b) => a.plane - b.plane || a.short.localeCompare(b.short));
 }
 
-function epochToDate(satrec) {
+function epochToDate(satrec: SatRec): Date {
   const year = satrec.epochyr < 57 ? 2000 + satrec.epochyr : 1900 + satrec.epochyr;
   return new Date(Date.UTC(year, 0, 1) + (satrec.epochdays - 1) * 86400000);
 }
 
 // Galileo uses three orbital planes 120° apart in RAAN. The two satellites launched into
 // the wrong (eccentric) orbit in 2014 are flagged separately.
-function assignPlanes(sats) {
+function assignPlanes(sats: Satellite[]): void {
   const nominal = sats.filter(s => s.eccentricity < 0.05);
   // Pick the offset that best fits a 3-plane, 120°-spaced grid.
   let best = { offset: 0, err: Infinity };
@@ -123,15 +190,15 @@ function assignPlanes(sats) {
 }
 
 // ECI position (km) at a given date, or null if SGP4 fails.
-export function eciAt(sat, date) {
+export function eciAt(sat: Satellite, date: Date): Eci | null {
   const pv = propagate(sat.satrec, date);
   if (!pv || !pv.position) return null;
   return { position: pv.position, velocity: pv.velocity };
 }
 
 // One full revolution sampled in ECI (km), starting at `date`.
-export function sampleOrbit(sat, date, steps = 180) {
-  const pts = [];
+export function sampleOrbit(sat: Satellite, date: Date, steps = 180): Vec3[] {
+  const pts: Vec3[] = [];
   const periodMs = sat.periodMin * 60000;
   for (let i = 0; i <= steps; i++) {
     const pv = eciAt(sat, new Date(date.getTime() + (i / steps) * periodMs));
@@ -141,7 +208,7 @@ export function sampleOrbit(sat, date, steps = 180) {
 }
 
 // Rotate an ECI vector into Earth-fixed coordinates and return geocentric lon/lat (deg) + radius (km).
-export function eciToLonLatR([x, y, z], gmst) {
+export function eciToLonLatR([x, y, z]: Vec3, gmst: number): LonLatR {
   const c = Math.cos(gmst), s = Math.sin(gmst);
   const X = x * c + y * s;
   const Y = -x * s + y * c;
@@ -152,7 +219,7 @@ export function eciToLonLatR([x, y, z], gmst) {
 export { gstime };
 
 // Sub-solar point (deg), low-precision solar ephemeris — plenty for a day/night shade.
-export function subsolarPoint(date) {
+export function subsolarPoint(date: Date): [lon: number, lat: number] {
   const n = date.getTime() / 86400000 - 10957.5; // days since J2000.0
   const rad = Math.PI / 180;
   const L = 280.46 + 0.9856474 * n;
@@ -167,7 +234,7 @@ export function subsolarPoint(date) {
 }
 
 // Angular radius (deg) of the ground area that sees the satellite above `minElevDeg`.
-export function footprintRadiusDeg(radiusKm, minElevDeg = 10) {
+export function footprintRadiusDeg(radiusKm: number, minElevDeg = 10): number {
   const e = (minElevDeg * Math.PI) / 180;
   return ((Math.acos((EARTH_RADIUS_KM * Math.cos(e)) / radiusKm) - e) * 180) / Math.PI;
 }
