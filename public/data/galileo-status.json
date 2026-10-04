@@ -1,0 +1,218 @@
+{
+  "source": "https://www.gsc-europa.eu/system-service-status/constellation-information",
+  "fetchedAt": "2026-10-04T10:52:27.916Z",
+  "satellites": {
+    "GSAT0101": {
+      "svid": "E11",
+      "clock": "RAFS",
+      "status": "USABLE",
+      "nagu": null
+    },
+    "GSAT0102": {
+      "svid": "E12",
+      "clock": "RAFS",
+      "status": "USABLE",
+      "nagu": null
+    },
+    "GSAT0103": {
+      "svid": "E19",
+      "clock": "RAFS",
+      "status": "USABLE",
+      "nagu": null
+    },
+    "GSAT0201": {
+      "svid": "E18",
+      "clock": "PHM",
+      "status": "NOT USABLE",
+      "nagu": {
+        "id": "2021008",
+        "type": "GENERAL",
+        "subject": "GSAT0201 AND GSAT0202 UNAVAILABLE",
+        "url": "https://www.gsc-europa.eu/notice-advisory-to-galileo-users-nagu-2021008"
+      }
+    },
+    "GSAT0202": {
+      "svid": "E14",
+      "clock": "RAFS",
+      "status": "NOT USABLE",
+      "nagu": {
+        "id": "2021008",
+        "type": "GENERAL",
+        "subject": "GSAT0201 AND GSAT0202 UNAVAILABLE",
+        "url": "https://www.gsc-europa.eu/notice-advisory-to-galileo-users-nagu-2021008"
+      }
+    },
+    "GSAT0203": {
+      "svid": "E26",
+      "clock": "PHM",
+      "status": "USABLE",
+      "nagu": null
+    },
+    "GSAT0204": {
+      "svid": "E22",
+      "clock": "RAFS",
+      "status": "NOT USABLE",
+      "nagu": {
+        "id": "2017045",
+        "type": "GENERAL",
+        "subject": "GSAT0204 REMOVED FROM ACTIVE SERVICE ON 2017-12-08 UNTIL FURTHER NOTICE FOR CONSTELLATION MANAGEMENT PURPOSES",
+        "url": "https://www.gsc-europa.eu/notice-advisory-to-galileo-users-nagu-2017045"
+      }
+    },
+    "GSAT0206": {
+      "svid": "E30",
+      "clock": "PHM",
+      "status": "USABLE",
+      "nagu": null
+    },
+    "GSAT0207": {
+      "svid": "E07",
+      "clock": "PHM",
+      "status": "USABLE",
+      "nagu": null
+    },
+    "GSAT0208": {
+      "svid": "E08",
+      "clock": "PHM",
+      "status": "USABLE",
+      "nagu": null
+    },
+    "GSAT0209": {
+      "svid": "E09",
+      "clock": "RAFS",
+      "status": "USABLE",
+      "nagu": null
+    },
+    "GSAT0210": {
+      "svid": "E01",
+      "clock": "RAFS",
+      "status": "NOT USABLE",
+      "nagu": {
+        "id": "2023048",
+        "type": "GENERAL",
+        "subject": "GSAT0210 REMOVED FROM ACTIVE SERVICE",
+        "url": "https://www.gsc-europa.eu/notice-advisory-to-galileo-users-nagu-2023048"
+      }
+    },
+    "GSAT0211": {
+      "svid": "E02",
+      "clock": "PHM",
+      "status": "USABLE",
+      "nagu": null
+    },
+    "GSAT0212": {
+      "svid": "E03",
+      "clock": "PHM",
+      "status": "USABLE",
+      "nagu": null
+    },
+    "GSAT0213": {
+      "svid": "E04",
+      "clock": "RAFS",
+      "status": "USABLE",
+      "nagu": null
+    },
+    "GSAT0214": {
+      "svid": "E05",
+      "clock": "PHM",
+      "status": "USABLE",
+      "nagu": null
+    },
+    "GSAT0215": {
+      "svid": "E21",
+      "clock": "PHM",
+      "status": "USABLE",
+      "nagu": null
+    },
+    "GSAT0216": {
+      "svid": "E25",
+      "clock": "PHM",
+      "status": "USABLE",
+      "nagu": null
+    },
+    "GSAT0217": {
+      "svid": "E27",
+      "clock": "PHM",
+      "status": "USABLE",
+      "nagu": null
+    },
+    "GSAT0218": {
+      "svid": "E31",
+      "clock": "PHM",
+      "status": "USABLE",
+      "nagu": null
+    },
+    "GSAT0219": {
+      "svid": "E36",
+      "clock": "PHM",
+      "status": "USABLE",
+      "nagu": null
+    },
+    "GSAT0220": {
+      "svid": "E13",
+      "clock": "PHM",
+      "status": "USABLE",
+      "nagu": null
+    },
+    "GSAT0221": {
+      "svid": "E15",
+      "clock": "PHM",
+      "status": "USABLE",
+      "nagu": null
+    },
+    "GSAT0222": {
+      "svid": "E33",
+      "clock": "PHM",
+      "status": "USABLE",
+      "nagu": null
+    },
+    "GSAT0223": {
+      "svid": "E34",
+      "clock": "PHM",
+      "status": "USABLE",
+      "nagu": null
+    },
+    "GSAT0224": {
+      "svid": "E10",
+      "clock": "PHM",
+      "status": "USABLE",
+      "nagu": null
+    },
+    "GSAT0225": {
+      "svid": "E29",
+      "clock": "PHM",
+      "status": "USABLE",
+      "nagu": null
+    },
+    "GSAT0226": {
+      "svid": "E23",
+      "clock": "PHM",
+      "status": "USABLE",
+      "nagu": null
+    },
+    "GSAT0227": {
+      "svid": "E06",
+      "clock": "PHM",
+      "status": "USABLE",
+      "nagu": null
+    },
+    "GSAT0232": {
+      "svid": "E16",
+      "clock": "PHM",
+      "status": "USABLE",
+      "nagu": null
+    },
+    "GSAT0233": {
+      "svid": "E28",
+      "clock": "PHM",
+      "status": "USABLE",
+      "nagu": null
+    },
+    "GSAT0234": {
+      "svid": "E32",
+      "clock": "PHM",
+      "status": "USABLE",
+      "nagu": null
+    }
+  }
+}
