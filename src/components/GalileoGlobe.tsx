@@ -38,6 +38,8 @@ const ATMOSPHERE_KM = 100;
 const ORBIT_STEPS = 240;
 const ORBIT_RESAMPLE_MS = 30 * 60000;
 const SPEEDS = [1, 10, 60, 600, 3600];
+// Auto-rotation, in degrees of longitude per frame.
+const AUTO_ROTATE_STEP = 0.08 / 3;
 // How often an open page re-reads the data files (they're refreshed on the server every ~2 h).
 const DATA_RELOAD_MS = 30 * 60000;
 // Show a warning when orbit data is older than this (the scheduled refresh has stopped working).
@@ -433,7 +435,7 @@ export default function GalileoGlobe() {
         v.tgt[0] = -sel[0];
         v.tgt[1] = -sel[1];
       } else if (u.autoRotate && !v.dragging) {
-        v.tgt[0] += 0.08;
+        v.tgt[0] += AUTO_ROTATE_STEP;
       }
       // take the short way round
       v.tgt[0] = v.rot[0] + ((((v.tgt[0] - v.rot[0]) % 360) + 540) % 360) - 180;
