@@ -38,6 +38,9 @@ const ATMOSPHERE_KM = 100;
 const ORBIT_STEPS = 240;
 const ORBIT_RESAMPLE_MS = 30 * 60000;
 const SPEEDS = [1, 10, 60, 600, 3600];
+const MIN_ZOOM = 0.5;
+const MAX_ZOOM = 5;
+const clampZoom = (z: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z));
 // Auto-rotation, in degrees of longitude per frame.
 const AUTO_ROTATE_STEP = 0.08 / 3;
 // How often an open page re-reads the data files (they're refreshed on the server every ~2 h).
@@ -577,7 +580,7 @@ export default function GalileoGlobe() {
 
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      v.zoom = Math.min(5, Math.max(0.5, v.zoom * Math.exp(-e.deltaY * 0.0015)));
+      v.zoom = clampZoom(v.zoom * Math.exp(-e.deltaY * 0.0015));
     };
     const el = svgRef.current!;
     el.addEventListener('wheel', onWheel, { passive: false });
@@ -629,14 +632,37 @@ export default function GalileoGlobe() {
     return () => clearInterval(id);
   }, [sats, simNow, observer]);
 
-  // Drag to rotate. Pointer capture starts only once the pointer actually moves,
-  // so clicks on satellites still reach them.
+  // One pointer drags to rotate; two pointers pinch to zoom. Pointer capture starts only once
+  // the pointer actually moves, so clicks on satellites still reach them.
+  const pointers = useRef(new Map<number, [number, number]>());
+  const pinch = useRef<{ dist: number; zoom: number } | null>(null);
+  const pinchDist = () => {
+    const [a, b] = [...pointers.current.values()];
+    return Math.hypot(a[0] - b[0], a[1] - b[1]);
+  };
+
   const onPointerDown = (e: ReactPointerEvent<SVGSVGElement>) => {
-    view.current.down = [e.clientX, e.clientY];
-    view.current.lastXY = [e.clientX, e.clientY];
+    const v = view.current;
+    pointers.current.set(e.pointerId, [e.clientX, e.clientY]);
+    if (pointers.current.size === 2) {
+      // Second finger: switch from dragging to pinching.
+      for (const id of pointers.current.keys()) {
+        try { e.currentTarget.setPointerCapture(id); } catch { /* pointer already gone */ }
+      }
+      pinch.current = { dist: Math.max(1, pinchDist()), zoom: v.zoom };
+      v.dragging = true; // pauses auto-rotate and keeps the lift-off from registering as a tap
+    } else if (pointers.current.size === 1) {
+      v.down = [e.clientX, e.clientY];
+      v.lastXY = [e.clientX, e.clientY];
+    }
   };
   const onPointerMove = (e: ReactPointerEvent<SVGSVGElement>) => {
     const v = view.current;
+    if (pointers.current.has(e.pointerId)) pointers.current.set(e.pointerId, [e.clientX, e.clientY]);
+    if (pinch.current && pointers.current.size >= 2) {
+      v.zoom = clampZoom(pinch.current.zoom * (pinchDist() / pinch.current.dist));
+      return;
+    }
     if (!v.down) return;
     if (!v.lastXY) return;
     if (!v.dragging) {
@@ -650,8 +676,16 @@ export default function GalileoGlobe() {
     v.tgt[1] = Math.max(-85, Math.min(85, v.tgt[1] - (e.clientY - v.lastXY[1]) * k));
     v.lastXY = [e.clientX, e.clientY];
   };
-  const onPointerUp = () => {
+  const onPointerUp = (e: ReactPointerEvent<SVGSVGElement>) => {
     const v = view.current;
+    pointers.current.delete(e.pointerId);
+    if (pinch.current && pointers.current.size < 2) {
+      pinch.current = null;
+      const rest = [...pointers.current.values()][0];
+      // The remaining finger carries on as a drag, without a jump.
+      if (rest) v.lastXY = [rest[0], rest[1]];
+    }
+    if (pointers.current.size > 0) return;
     v.wasDrag = v.dragging;
     v.dragging = false;
     v.down = null;

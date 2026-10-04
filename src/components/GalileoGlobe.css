@@ -20,6 +20,8 @@
   cursor: grab;
   touch-action: none;
   user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .gg-stage svg:active {
@@ -273,6 +275,7 @@
 
   .gg-stage {
     height: 75vh;
+    height: 75dvh; /* excludes the mobile browser toolbar */
     flex: none;
   }
 
