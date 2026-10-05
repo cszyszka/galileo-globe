@@ -224,7 +224,7 @@ function SatDetails({ sat, health, readout, mask }: { sat: Satellite; health: He
 }
 
 export default function GalileoGlobe() {
-  const stageRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<HTMLElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const panelRef = useRef<HTMLElement>(null);
   const reloadRef = useRef<(() => Promise<void>) | null>(null);
@@ -237,7 +237,8 @@ export default function GalileoGlobe() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [speed, setSpeed] = useState(1);
   const [showLabels, setShowLabels] = useState(false);
-  const [autoRotate, setAutoRotate] = useState(true);
+  // People who ask for reduced motion start with the globe still.
+  const [autoRotate, setAutoRotate] = useState(() => !window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const [follow, setFollow] = useState(false);
   const [readout, setReadout] = useState<{ time: Date; bySat: Record<string, SatReadout> }>({ time: new Date(), bySat: {} });
   const [observer, setObserver] = useState<Observer | null>(null);
@@ -784,9 +785,11 @@ export default function GalileoGlobe() {
 
   return (
     <div className="gg-root">
-      <div className="gg-stage" ref={stageRef}>
+      <main className="gg-stage" ref={stageRef}>
         <svg
           ref={svgRef}
+          role="img"
+          aria-label="Interactive 3D globe of the Galileo and LEO-PNT satellites. The satellite list in the side panel can be used with a keyboard."
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
@@ -808,14 +811,14 @@ export default function GalileoGlobe() {
         <StaleBanner stale={staleSources} />
         <Legend />
         <div className="gg-hint">Drag to rotate · scroll to zoom · click a satellite, or the Earth to pick a location</div>
-      </div>
+      </main>
 
       <aside className="gg-panel" ref={panelRef}>
         <section>
           <h2>Time</h2>
           <div className="gg-buttons">
             {SPEEDS.map(s => (
-              <button key={s} className={s === speed ? 'active' : ''} onClick={() => changeSpeed(s)}>×{s}</button>
+              <button key={s} className={s === speed ? 'active' : ''} aria-pressed={s === speed} onClick={() => changeSpeed(s)}>×{s}</button>
             ))}
             <button onClick={() => changeSpeed(1, true)} disabled={live}>Now</button>
           </div>
@@ -836,7 +839,7 @@ export default function GalileoGlobe() {
                 <span className="gg-muted">Elevation mask</span>
                 <div className="gg-buttons">
                   {ELEVATION_MASKS.map(m => (
-                    <button key={m} className={m === mask ? 'active' : ''} onClick={() => setMask(m)}>{m}°</button>
+                    <button key={m} className={m === mask ? 'active' : ''} aria-pressed={m === mask} onClick={() => setMask(m)}>{m}°</button>
                   ))}
                 </div>
               </div>
@@ -881,7 +884,7 @@ export default function GalileoGlobe() {
                   </li>
                   {inView.map(({ s, look, health }) => (
                     <li key={s.id}>
-                      <button className={s.id === selectedId ? 'active' : ''} onClick={() => focusOn(s.id)}>
+                      <button className={s.id === selectedId ? 'active' : ''} aria-pressed={s.id === selectedId} onClick={() => focusOn(s.id)}>
                         <span
                           className={`gg-dot${health.category === 'bad' ? ' gg-hollow' : ''}`}
                           style={health.category === 'bad' ? { borderColor: s.color } : { background: s.color }}
@@ -909,7 +912,7 @@ export default function GalileoGlobe() {
             <button onClick={useMyLocation}>Use my location</button>
             {observer && <button onClick={() => setObserver(null)}>Clear</button>}
           </div>
-          {geoError && <p className="gg-error gg-small">{geoError}</p>}
+          {geoError && <p className="gg-error gg-small" role="alert">{geoError}</p>}
         </section>
 
         <section>

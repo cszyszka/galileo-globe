@@ -68,7 +68,7 @@ export function Legend() {
         ?
       </button>
       {open && (
-        <aside className="gg-legend" aria-label="How to read the globe">
+        <aside className="gg-legend" aria-label="How to read the globe" onKeyDown={e => { if (e.key === 'Escape') close(); }}>
           <div className="gg-legend-head">
             <strong>How to read the globe</strong>
             <button className="gg-legend-close" aria-label="Close legend" onClick={close}>×</button>
