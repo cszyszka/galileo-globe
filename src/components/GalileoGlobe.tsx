@@ -1014,12 +1014,16 @@ export default function GalileoGlobe() {
 
         {meta.status === 'ready' && (
           <p className="gg-muted gg-small">
-            Orbital elements from CelesTrak (the “galileo” group and objects named LPNTSAT — ESA’s Celeste
+            Orbital elements from <a href="https://celestrak.org" target="_blank" rel="noopener noreferrer">CelesTrak</a> (the “galileo” group and objects named LPNTSAT — ESA’s Celeste
             LEO-PNT demonstrators), propagated with SGP4 in your browser.
             {meta.sources.galileo?.fetchedAt && ` Updated ${formatUtc(new Date(meta.sources.galileo.fetchedAt))}.`}
             {' '}Inclusion here doesn’t mean a satellite is currently healthy or in service.
           </p>
         )}
+
+        <p className="gg-muted gg-small gg-footer">
+          © 2026 Cezary Szyszka · <a href="/about/">About &amp; credits</a>
+        </p>
       </aside>
     </div>
   );

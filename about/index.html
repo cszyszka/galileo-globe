@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>About &amp; credits · Galileo &amp; LEO-PNT</title>
+    <meta name="description" content="Data sources, credits and copyright for the Galileo &amp; LEO-PNT live satellite globe." />
+    <meta name="theme-color" content="#050e1a" />
+    <style>
+      *, *::before, *::after { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: #050e1a;
+        color: #cbd5e1;
+        font: 15px/1.6 system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      main { max-width: 680px; margin: 0 auto; padding: 32px 16px 64px; }
+      a { color: #93c5fd; }
+      h1 { color: #fff; font-size: 28px; line-height: 1.2; margin: 24px 0 8px; }
+      h2 { color: #e2e8f0; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; margin: 32px 0 8px; }
+      p, ul { margin: 0 0 12px; }
+      ul { padding-left: 20px; }
+      li { margin-bottom: 6px; }
+      .muted { color: #94a3b8; }
+      .back { display: inline-block; margin-bottom: 8px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <a class="back" href="/">&larr; Back to the globe</a>
+      <h1>About &amp; credits</h1>
+      <p class="muted">
+        A live 3D view of the Galileo navigation satellites and ESA’s Celeste LEO-PNT demonstrators.
+        Orbits are computed in your browser from the latest published orbital elements.
+      </p>
+
+      <h2>Data</h2>
+      <ul>
+        <li>
+          <strong>Orbital elements (TLEs)</strong>: from <a href="https://celestrak.org" rel="noopener">CelesTrak</a>,
+          maintained by Dr. T.S. Kelso, using the
+          <a href="https://celestrak.org/NORAD/elements/" rel="noopener">current GP data</a> for the
+          “galileo” group and for objects named LPNTSAT. The underlying orbital data comes from the
+          U.S. Space Force’s 18th Space Defense Squadron via
+          <a href="https://www.space-track.org" rel="noopener">Space-Track.org</a>.
+        </li>
+        <li>
+          <strong>Galileo service status</strong>: from the
+          <a href="https://www.gsc-europa.eu/system-service-status/constellation-information" rel="noopener">European GNSS Service Centre</a>
+          (GSC).
+        </li>
+        <li>
+          <strong>Country outlines</strong>:
+          <a href="https://github.com/topojson/world-atlas" rel="noopener">world-atlas</a>, derived from
+          <a href="https://www.naturalearthdata.com" rel="noopener">Natural Earth</a>.
+        </li>
+      </ul>
+      <p class="muted">
+        Satellite data is refreshed a few times a day and may lag behind reality. Being listed here does
+        not mean a satellite is healthy or in service; use the official service status for that.
+      </p>
+
+      <h2>Built with</h2>
+      <p>
+        React, D3, <a href="https://github.com/shashwatak/satellite-js" rel="noopener">satellite.js</a>
+        (SGP4 propagation) and Vite, each under its own open-source licence.
+      </p>
+
+      <h2>Copyright</h2>
+      <p>
+        &copy; 2026 Cezary Szyszka. All rights reserved. This is an independent project and is not
+        affiliated with or endorsed by <a href="https://celestrak.org" rel="noopener">CelesTrak</a>, the
+        <a href="https://www.euspa.europa.eu" rel="noopener">European Union Agency for the Space Programme (EUSPA)</a>,
+        the <a href="https://www.gsc-europa.eu" rel="noopener">European GNSS Service Centre (GSC)</a>,
+        the <a href="https://www.esa.int" rel="noopener">European Space Agency (ESA)</a> or the
+        <a href="https://www.dlr.de/en/gk" rel="noopener">DLR Galileo Competence Centre</a>.
+      </p>
+    </main>
+  </body>
+</html>

@@ -470,3 +470,9 @@
 .gg-layer-count {
   margin-left: auto;
 }
+
+.gg-footer {
+  margin-top: 24px;
+  padding-top: 12px;
+  border-top: 1px solid #12263d;
+}
