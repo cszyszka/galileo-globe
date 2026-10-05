@@ -1,0 +1,9 @@
+Copyright (c) 2026 Cezary Szyszka. All rights reserved.
+
+This software and its source code are proprietary. No permission is granted to use, copy,
+modify, merge, publish, distribute, sublicense, or sell copies of it, in whole or in part,
+without the prior written permission of the copyright holder.
+
+Third-party components used by this project (such as React, D3 and satellite.js) are covered
+by their own licences. Orbital data is provided by CelesTrak and the European GNSS Service
+Centre and remains subject to their terms; see the About page of the site for attribution.
