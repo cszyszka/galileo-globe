@@ -1,4 +1,4 @@
-import type { PointerEvent as ReactPointerEvent } from 'react';
+import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import * as topojson from 'topojson-client';
@@ -29,6 +29,8 @@ import type { Constellation, Satellite, StatusCategory, GalileoStatus, GalileoSt
 import type { Topology, GeometryCollection } from 'topojson-specification';
 import SkyPlot from './SkyPlot';
 import { ErrorNotice, Legend, LoadingNotice, StaleBanner } from './StageNotices';
+import TimeControls from './TimeControls';
+import { readFlag, writeFlag } from '../lib/storage';
 import './GalileoGlobe.css';
 
 // Earth radius as a fraction of half the viewport — leaves room for the eccentric
@@ -49,6 +51,9 @@ const DATA_RELOAD_MS = 30 * 60000;
 // Show a warning when orbit data is older than this (the scheduled refresh has stopped working).
 const STALE_DATA_MS = 12 * 3600000;
 const ELEVATION_MASKS = [0, 5, 10, 15];
+const SHOW_TIME_KEY = 'gg-show-time';
+const SHEET_HALF = 0.52; // sheet heights as a share of the window height
+const SHEET_FULL = 0.8;
 const COMPASS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
 
 interface Observer { lon: number; lat: number }
@@ -244,6 +249,18 @@ export default function GalileoGlobe() {
   const [observer, setObserver] = useState<Observer | null>(null);
   const [mask, setMask] = useState(10);
   const [geoError, setGeoError] = useState<string | null>(null);
+  const [tab, setTab] = useState<'satellites' | 'settings'>('satellites');
+  // On phones the panel is a bottom sheet with three heights; sheetDrag is its height (px) mid-drag.
+  const [sheet, setSheet] = useState<'collapsed' | 'half' | 'full'>('collapsed');
+  const [sheetDrag, setSheetDrag] = useState<number | null>(null);
+  const [headH, setHeadH] = useState(160);
+  const [showTime, setShowTimeState] = useState(() => readFlag(SHOW_TIME_KEY, true));
+  const setShowTime = (on: boolean) => {
+    setShowTimeState(on);
+    writeFlag(SHOW_TIME_KEY, on);
+  };
+  const headRef = useRef<HTMLDivElement>(null);
+  const grip = useRef<{ y: number; h: number; moved: boolean } | null>(null);
 
   const clock = useRef({ anchorReal: Date.now(), anchorSim: Date.now(), speed: 1 });
   const view = useRef<ViewState>({ rot: [-10, -25, 0], tgt: [-10, -25, 0], zoom: 1, dragging: false, wasDrag: false, down: null, lastXY: null });
@@ -603,6 +620,15 @@ export default function GalileoGlobe() {
     };
   }, [sats, simNow]);
 
+  // The collapsed sheet is exactly as tall as its header, which changes with the time-controls setting.
+  useEffect(() => {
+    const el = headRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setHeadH(Math.ceil(el.getBoundingClientRect().height) + 1));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   // Panel readout (a few times a second is plenty for text)
   useEffect(() => {
     if (!sats.length) return;
@@ -702,6 +728,42 @@ export default function GalileoGlobe() {
     v.lastXY = null;
   };
 
+  const pickTab = (t: 'satellites' | 'settings') => {
+    setTab(t);
+    setSheet(prev => (prev === 'collapsed' ? 'half' : prev));
+  };
+
+  // Drag the grip to resize the sheet; a plain tap toggles it open or closed.
+  const sheetPx = (which: 'collapsed' | 'half' | 'full') =>
+    which === 'collapsed' ? headH : which === 'half' ? Math.max(headH, window.innerHeight * SHEET_HALF) : window.innerHeight * SHEET_FULL;
+  const onGripDown = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    grip.current = { y: e.clientY, h: panelRef.current?.getBoundingClientRect().height ?? headH, moved: false };
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* pointer already gone */ }
+  };
+  const onGripMove = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    const g = grip.current;
+    if (!g) return;
+    if (!g.moved && Math.abs(e.clientY - g.y) < 6) return;
+    g.moved = true;
+    setSheetDrag(Math.min(sheetPx('full'), Math.max(headH, g.h + g.y - e.clientY)));
+  };
+  const onGripUp = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    const g = grip.current;
+    grip.current = null;
+    if (!g) return;
+    if (!g.moved) {
+      setSheet(prev => (prev === 'collapsed' ? 'half' : 'collapsed'));
+    } else {
+      const h = Math.min(sheetPx('full'), Math.max(headH, g.h + g.y - e.clientY));
+      const sizes = (['collapsed', 'half', 'full'] as const).map(k => [k, Math.abs(sheetPx(k) - h)] as const);
+      setSheet(sizes.reduce((best, cur) => (cur[1] < best[1] ? cur : best))[0]);
+    }
+    setSheetDrag(null);
+  };
+  const sheetHeight = sheetDrag != null
+    ? `${sheetDrag}px`
+    : sheet === 'collapsed' ? `${headH}px` : sheet === 'half' ? `max(${headH}px, ${SHEET_HALF * 100}dvh)` : `${SHEET_FULL * 100}dvh`;
+
   const focusOn = (id: string) => {
     setSelectedId(id);
     const p = positions.current.pos?.[id];
@@ -733,6 +795,10 @@ export default function GalileoGlobe() {
   if (prevSelectedId !== selectedId) {
     setPrevSelectedId(selectedId);
     setClosingId(prevSelectedId);
+    if (selectedId != null) {
+      setTab('satellites');
+      setSheet(prev => (prev === 'collapsed' ? 'half' : prev));
+    }
   }
 
   // Bring the opened row into view once it has expanded (also when picked on the globe).
@@ -784,7 +850,7 @@ export default function GalileoGlobe() {
   };
 
   return (
-    <div className="gg-root">
+    <div className="gg-root" style={{ '--gg-sheet-h': sheetHeight } as CSSProperties}>
       <main className="gg-stage" ref={stageRef}>
         <svg
           ref={svgRef}
@@ -810,20 +876,66 @@ export default function GalileoGlobe() {
         {meta.status === 'error' && <ErrorNotice onRetry={retryLoad} />}
         <StaleBanner stale={staleSources} />
         <Legend />
+        {showTime && (
+          <div className="gg-timebar">
+            <span className="gg-muted">Time</span>
+            <TimeControls speeds={SPEEDS} speed={speed} live={live} onSpeed={s => changeSpeed(s)} onNow={() => changeSpeed(1, true)} />
+          </div>
+        )}
         <div className="gg-hint">Drag to rotate · scroll to zoom · click a satellite, or the Earth to pick a location</div>
       </main>
 
-      <aside className="gg-panel" ref={panelRef}>
-        <section>
-          <h2>Time</h2>
-          <div className="gg-buttons">
-            {SPEEDS.map(s => (
-              <button key={s} className={s === speed ? 'active' : ''} aria-pressed={s === speed} onClick={() => changeSpeed(s)}>×{s}</button>
-            ))}
-            <button onClick={() => changeSpeed(1, true)} disabled={live}>Now</button>
+      <aside className={`gg-panel gg-sheet-${sheet}${sheetDrag != null ? ' dragging' : ''}`} ref={panelRef}>
+        <div className="gg-sheet-head" ref={headRef}>
+          <button
+            className="gg-grip"
+            aria-label="Resize panel"
+            aria-expanded={sheet !== 'collapsed'}
+            onPointerDown={onGripDown}
+            onPointerMove={onGripMove}
+            onPointerUp={onGripUp}
+            onPointerCancel={onGripUp}
+            onKeyDown={e => {
+              if (e.key === 'ArrowUp') setSheet(sheet === 'collapsed' ? 'half' : 'full');
+              if (e.key === 'ArrowDown') setSheet(sheet === 'full' ? 'half' : 'collapsed');
+            }}
+          />
+          <div className="gg-tabs" role="tablist" aria-label="Panel">
+            <button role="tab" id="gg-tab-satellites" aria-selected={tab === 'satellites'} aria-controls="gg-tabpanel" onClick={() => pickTab('satellites')}>Satellites</button>
+            <button role="tab" id="gg-tab-settings" aria-selected={tab === 'settings'} aria-controls="gg-tabpanel" onClick={() => pickTab('settings')}>Settings</button>
           </div>
-        </section>
+          {showTime && (
+            <div className="gg-sheet-time">
+              <TimeControls speeds={SPEEDS} speed={speed} live={live} onSpeed={s => changeSpeed(s)} onNow={() => changeSpeed(1, true)} />
+            </div>
+          )}
+          <div className="gg-peek">
+            {observer ? (
+              <>
+                <strong>{inView.length}</strong> in view
+                {visible.galileo && status.data && (
+                  <>
+                    {' · '}<strong>{usableGalileoInView}</strong> usable Galileo
+                    <span className={usableGalileoInView >= 4 ? 'gg-fix-ok' : 'gg-fix-no'}>
+                      {usableGalileoInView >= 4 ? ' — enough for a Galileo-only fix' : ' — fewer than 4, no fix'}
+                    </span>
+                  </>
+                )}
+              </>
+            ) : status.data ? (
+              <>
+                <span><span className="gg-dot" style={{ background: STATUS_COLORS.ok }} /> {statusCounts.ok} usable</span>
+                {statusCounts.bad > 0 && (
+                  <span><span className="gg-dot gg-hollow" style={{ borderColor: STATUS_COLORS.bad }} /> {statusCounts.bad} not usable</span>
+                )}
+              </>
+            ) : null}
+          </div>
+        </div>
 
+        <div className="gg-sheet-body" role="tabpanel" id="gg-tabpanel" aria-labelledby={`gg-tab-${tab}`}>
+        {tab === 'satellites' && (
+          <>
         <section>
           <h2>
             Visible from
@@ -916,26 +1028,6 @@ export default function GalileoGlobe() {
         </section>
 
         <section>
-          <h2>Constellations</h2>
-          {LAYERS.map(({ key, label, note }) => (
-            <label key={key}>
-              <input
-                type="checkbox"
-                checked={visible[key]}
-                onChange={e => {
-                  const on = e.target.checked;
-                  setVisible(vis => ({ ...vis, [key]: on }));
-                  if (!on && selected?.layer === key) setSelectedId(null);
-                }}
-              />
-              {label}
-              {note && <span className="gg-muted">({note})</span>}
-              <span className="gg-muted gg-layer-count">{layerCounts.get(key) ?? 0} sats</span>
-            </label>
-          ))}
-        </section>
-
-        <section>
           <h2>Galileo service status</h2>
           {status.state === 'loading' && <p className="gg-muted">Loading…</p>}
           {status.state === 'error' && <p className="gg-error">Couldn’t load status: {status.message}</p>}
@@ -953,28 +1045,12 @@ export default function GalileoGlobe() {
                   <span><span className="gg-dot" style={{ background: STATUS_COLORS.unknown }} /> {statusCounts.unknown} unlisted</span>
                 )}
               </div>
-              <label>
-                <input type="checkbox" checked={showUnusable} onChange={e => {
-                  const on = e.target.checked;
-                  setShowUnusable(on);
-                  if (!on && selHealth?.category === 'bad') setSelectedId(null);
-                }} /> Show non-usable satellites
-              </label>
               <p className="gg-muted gg-small">
                 Source: <a href={status.data.source} target="_blank" rel="noreferrer">European GNSS Service Centre</a>
 , updated {formatUtc(new Date(status.data.fetchedAt))}. Hollow markers and dashed orbits are not usable.
               </p>
             </>
           )}
-        </section>
-
-        <section>
-          <h2>View</h2>
-          <label><input type="checkbox" checked={autoRotate} onChange={e => setAutoRotate(e.target.checked)} /> Auto-rotate</label>
-          <label><input type="checkbox" checked={showLabels} onChange={e => setShowLabels(e.target.checked)} /> Show all labels</label>
-          <label>
-            <input type="checkbox" checked={follow} disabled={!selected} onChange={e => setFollow(e.target.checked)} /> Follow selected
-          </label>
         </section>
 
         {groups.map((list, plane) => list.length > 0 && visible[list[0].layer] && (
@@ -1034,9 +1110,60 @@ export default function GalileoGlobe() {
           </p>
         )}
 
+          </>
+        )}
+
+        {tab === 'settings' && (
+          <>
+        <section>
+          <h2>Constellations</h2>
+          {LAYERS.map(({ key, label, note }) => (
+            <label key={key}>
+              <input
+                type="checkbox"
+                checked={visible[key]}
+                onChange={e => {
+                  const on = e.target.checked;
+                  setVisible(vis => ({ ...vis, [key]: on }));
+                  if (!on && selected?.layer === key) setSelectedId(null);
+                }}
+              />
+              {label}
+              {note && <span className="gg-muted">({note})</span>}
+              <span className="gg-muted gg-layer-count">{layerCounts.get(key) ?? 0} sats</span>
+            </label>
+          ))}
+        </section>
+
+        {status.data && (
+          <section>
+            <h2>Galileo service status</h2>
+            <label>
+              <input type="checkbox" checked={showUnusable} onChange={e => {
+                const on = e.target.checked;
+                setShowUnusable(on);
+                if (!on && selHealth?.category === 'bad') setSelectedId(null);
+              }} /> Show non-usable satellites
+            </label>
+          </section>
+        )}
+
+        <section>
+          <h2>View</h2>
+          <label><input type="checkbox" checked={showTime} onChange={e => setShowTime(e.target.checked)} /> Show time controls</label>
+          <label><input type="checkbox" checked={autoRotate} onChange={e => setAutoRotate(e.target.checked)} /> Auto-rotate</label>
+          <label><input type="checkbox" checked={showLabels} onChange={e => setShowLabels(e.target.checked)} /> Show all labels</label>
+          <label>
+            <input type="checkbox" checked={follow} disabled={!selected} onChange={e => setFollow(e.target.checked)} /> Follow selected
+          </label>
+        </section>
+
         <p className="gg-muted gg-small gg-footer">
           © 2026 Cezary Szyszka · <a href="/about/">About &amp; credits</a>
         </p>
+          </>
+        )}
+        </div>
       </aside>
     </div>
   );
