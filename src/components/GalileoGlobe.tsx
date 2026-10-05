@@ -880,7 +880,7 @@ export default function GalileoGlobe() {
           onPointerCancel={onPointerUp}
         />
         <div className="gg-overlay">
-          <h1>Galileo &amp; LEO-PNT</h1>
+          <h1>Galileo Constellation</h1>
           <div className="gg-clock">
             {formatUtc(readout.time)}
             {live ? <span className="gg-live">LIVE</span> : <span className="gg-sim">×{speed}</span>}
