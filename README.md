@@ -1,4 +1,4 @@
-# Galileo & LEO-PNT Globe
+# Galileo Constellation
 
 **Live: https://galileo.spacecone.dev**
 
