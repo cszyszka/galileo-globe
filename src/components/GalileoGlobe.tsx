@@ -40,7 +40,7 @@ const DEG = Math.PI / 180;
 const ATMOSPHERE_KM = 100;
 const ORBIT_STEPS = 240;
 const ORBIT_RESAMPLE_MS = 30 * 60000;
-const SPEEDS = [1, 10, 60, 600, 3600];
+const SPEEDS = [1, 60, 600, 3600];
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 5;
 const clampZoom = (z: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z));
@@ -250,6 +250,8 @@ export default function GalileoGlobe() {
   const [mask, setMask] = useState(10);
   const [geoError, setGeoError] = useState<string | null>(null);
   const [tab, setTab] = useState<'satellites' | 'settings'>('satellites');
+  // The panel starts hidden; picking a satellite or a place reveals it.
+  const [panelOpen, setPanelOpen] = useState(false);
   // On phones the panel is a bottom sheet with three heights; sheetDrag is its height (px) mid-drag.
   const [sheet, setSheet] = useState<'collapsed' | 'half' | 'full'>('collapsed');
   const [sheetDrag, setSheetDrag] = useState<number | null>(null);
@@ -624,7 +626,10 @@ export default function GalileoGlobe() {
   useEffect(() => {
     const el = headRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => setHeadH(Math.ceil(el.getBoundingClientRect().height) + 1));
+    const ro = new ResizeObserver(() => {
+      const h = el.getBoundingClientRect().height;
+      if (h > 0) setHeadH(Math.ceil(h) + 1); // 0 while the panel is hidden
+    });
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
@@ -792,12 +797,25 @@ export default function GalileoGlobe() {
   // Keep the previously selected row's details mounted while it slides shut.
   const [prevSelectedId, setPrevSelectedId] = useState<string | null>(null);
   const [closingId, setClosingId] = useState<string | null>(null);
+  const [prevObserver, setPrevObserver] = useState<Observer | null>(null);
+  const reveal = () => {
+    setPanelOpen(true);
+    setTab('satellites');
+    setSheet(prev => (prev === 'collapsed' ? 'half' : prev));
+  };
   if (prevSelectedId !== selectedId) {
     setPrevSelectedId(selectedId);
     setClosingId(prevSelectedId);
     if (selectedId != null) {
-      setTab('satellites');
-      setSheet(prev => (prev === 'collapsed' ? 'half' : prev));
+      reveal();
+      if (observer) setObserver(null); // a satellite or a place, not both
+    }
+  }
+  if (prevObserver !== observer) {
+    setPrevObserver(observer);
+    if (observer) {
+      reveal();
+      if (selectedId != null) setSelectedId(null);
     }
   }
 
@@ -850,7 +868,7 @@ export default function GalileoGlobe() {
   };
 
   return (
-    <div className="gg-root" style={{ '--gg-sheet-h': sheetHeight } as CSSProperties}>
+    <div className={`gg-root${panelOpen ? ' panel-open' : ''}`} style={{ '--gg-sheet-h': panelOpen ? sheetHeight : '0px' } as CSSProperties}>
       <main className="gg-stage" ref={stageRef}>
         <svg
           ref={svgRef}
@@ -876,6 +894,17 @@ export default function GalileoGlobe() {
         {meta.status === 'error' && <ErrorNotice onRetry={retryLoad} />}
         <StaleBanner stale={staleSources} />
         <Legend />
+        <button
+          className="gg-menu-btn"
+          aria-label={panelOpen ? 'Hide panel' : 'Show panel'}
+          aria-expanded={panelOpen}
+          aria-controls="gg-panel"
+          onClick={() => setPanelOpen(open => !open)}
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+            <path d="M2 4h12M2 8h12M2 12h12" />
+          </svg>
+        </button>
         {showTime && (
           <div className="gg-timebar">
             <span className="gg-muted">Time</span>
@@ -885,7 +914,7 @@ export default function GalileoGlobe() {
         <div className="gg-hint">Drag to rotate · scroll to zoom · click a satellite, or the Earth to pick a location</div>
       </main>
 
-      <aside className={`gg-panel gg-sheet-${sheet}${sheetDrag != null ? ' dragging' : ''}`} ref={panelRef}>
+      <aside id="gg-panel" className={`gg-panel gg-sheet-${sheet}${sheetDrag != null ? ' dragging' : ''}`} ref={panelRef}>
         <div className="gg-sheet-head" ref={headRef}>
           <button
             className="gg-grip"
