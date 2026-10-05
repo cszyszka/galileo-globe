@@ -476,3 +476,149 @@
   padding-top: 12px;
   border-top: 1px solid #12263d;
 }
+
+/* Loading, error and stale-data notices over the globe */
+.gg-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.gg-center .gg-muted {
+  max-width: 320px;
+}
+
+.gg-center button {
+  pointer-events: auto;
+}
+
+.gg-center-title {
+  color: #e2e8f0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.gg-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid #12263d;
+  border-top-color: #60a5fa;
+  border-radius: 50%;
+  animation: gg-spin 0.9s linear infinite;
+}
+
+@keyframes gg-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gg-spinner { animation-duration: 3s; }
+}
+
+.gg-primary {
+  margin-top: 4px;
+  padding: 8px 18px;
+  color: #eff6ff;
+  background: #2563eb;
+  border: 0;
+  border-radius: 6px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.gg-primary:hover {
+  background: #3b82f6;
+}
+
+.gg-banner {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(560px, calc(100% - 32px));
+  padding: 8px 12px;
+  color: #fde68a;
+  background: rgba(120, 53, 15, 0.85);
+  border: 1px solid #b45309;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+  pointer-events: none;
+}
+
+/* Legend */
+.gg-help-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: #94a3b8;
+  background: #0b1a2e;
+  border: 1px solid #1e3a5f;
+  border-radius: 50%;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.gg-help-btn:hover {
+  color: #e2e8f0;
+}
+
+.gg-legend {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  width: min(280px, calc(100% - 24px));
+  padding: 12px 14px;
+  background: rgba(7, 20, 37, 0.94);
+  border: 1px solid #1e3a5f;
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.gg-legend p {
+  margin: 0 0 8px;
+}
+
+.gg-legend-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  color: #e2e8f0;
+}
+
+.gg-legend-close {
+  padding: 0 4px;
+  color: #94a3b8;
+  background: none;
+  border: 0;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.gg-legend-list {
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
+
+.gg-legend-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 3px;
+}

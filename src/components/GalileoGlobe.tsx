@@ -28,6 +28,7 @@ import {
 import type { Constellation, Satellite, StatusCategory, GalileoStatus, GalileoStatusEntry, LonLatR, Vec3, LayerKey } from '../lib/satellites';
 import type { Topology, GeometryCollection } from 'topojson-specification';
 import SkyPlot from './SkyPlot';
+import { ErrorNotice, Legend, LoadingNotice, StaleBanner } from './StageNotices';
 import './GalileoGlobe.css';
 
 // Earth radius as a fraction of half the viewport — leaves room for the eccentric
@@ -226,6 +227,7 @@ export default function GalileoGlobe() {
   const stageRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const panelRef = useRef<HTMLElement>(null);
+  const reloadRef = useRef<(() => Promise<void>) | null>(null);
 
   const [sats, setSats] = useState<Satellite[]>([]);
   const [meta, setMeta] = useState<LoadMeta>({ status: 'loading', sources: {} });
@@ -267,6 +269,7 @@ export default function GalileoGlobe() {
   useEffect(() => {
     let cancelled = false;
     let lastTleKey: string | null = null;
+    let lastCount = 0;
     const keys = Object.keys(SOURCES);
 
     const load = async () => {
@@ -295,11 +298,10 @@ export default function GalileoGlobe() {
       if (tleKey !== lastTleKey) {
         lastTleKey = tleKey;
         const all = keys.flatMap((k, i) => (texts[i] ? parseTle(texts[i], k as Constellation) : []));
+        lastCount = all.length;
         setSats(sortSats(all));
-        setMeta({ status: all.length ? 'ready' : 'error', sources });
-      } else {
-        setMeta(prev => ({ ...prev, sources }));
       }
+      setMeta({ status: lastCount ? 'ready' : 'error', sources });
 
       if (statusResult.status === 'fulfilled') {
         setStatus({ state: 'ready', data: statusResult.value });
@@ -309,10 +311,17 @@ export default function GalileoGlobe() {
       }
     };
 
+    reloadRef.current = load;
     load();
     const id = setInterval(load, DATA_RELOAD_MS);
     return () => { cancelled = true; clearInterval(id); };
   }, []);
+
+  const retryLoad = () => {
+    setMeta(prev => ({ ...prev, status: 'loading' }));
+    setStatus(prev => (prev.data ? prev : { state: 'loading', data: null }));
+    reloadRef.current?.();
+  };
 
   // Scene
   useEffect(() => {
@@ -733,6 +742,12 @@ export default function GalileoGlobe() {
     }, 320);
     return () => clearTimeout(id);
   }, [selectedId]);
+  const staleSources = [
+    ...Object.entries(meta.sources).flatMap(([key, src]) => (src.ok && src.fetchedAt ? [{ label: `${SOURCES[key].label} orbit data`, at: src.fetchedAt }] : [])),
+    ...(status.data ? [{ label: 'Galileo service status', at: status.data.fetchedAt }] : []),
+  ]
+    .map(x => ({ label: x.label, ageMs: Date.now() - Date.parse(x.at) }))
+    .filter(x => x.ageMs > STALE_DATA_MS);
   const live = speed === 1 && Math.abs(readout.time.getTime() - Date.now()) < 2000;
 
   // Satellites above the observer's elevation mask, highest first
@@ -783,20 +798,15 @@ export default function GalileoGlobe() {
             {formatUtc(readout.time)}
             {live ? <span className="gg-live">LIVE</span> : <span className="gg-sim">×{speed}</span>}
           </div>
-          {meta.status === 'loading' && <div className="gg-note">Loading orbit data…</div>}
-          {meta.status === 'error' && <div className="gg-note gg-error">No orbit data available.</div>}
-          {Object.entries(meta.sources).map(([key, src]) => {
-            if (!src.ok) {
-              return <div key={key} className="gg-note gg-error">Couldn’t load {SOURCES[key].label} orbit data ({src.message})</div>;
-            }
-            const age = src.fetchedAt ? Date.now() - Date.parse(src.fetchedAt) : 0;
-            return age > STALE_DATA_MS ? (
-              <div key={key} className="gg-note gg-error">
-                {SOURCES[key].label} orbit data is {Math.round(age / 3600000)} h old
-              </div>
-            ) : null;
-          })}
+          {Object.entries(meta.sources).map(([key, src]) =>
+            src.ok ? null : (
+              <div key={key} className="gg-note gg-error">Couldn’t load {SOURCES[key].label} orbit data ({src.message})</div>
+            ))}
         </div>
+        {meta.status === 'loading' && <LoadingNotice />}
+        {meta.status === 'error' && <ErrorNotice onRetry={retryLoad} />}
+        <StaleBanner stale={staleSources} />
+        <Legend />
         <div className="gg-hint">Drag to rotate · scroll to zoom · click a satellite, or the Earth to pick a location</div>
       </div>
 
