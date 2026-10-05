@@ -86,7 +86,7 @@
   position: absolute;
   bottom: 12px;
   left: 16px;
-  color: #475569;
+  color: #7c8da4;
   font-size: 12px;
   pointer-events: none;
 }
@@ -170,7 +170,7 @@
 }
 
 .gg-muted {
-  color: #64748b;
+  color: #7c8da4;
 }
 
 .gg-small {
@@ -258,7 +258,7 @@
 }
 
 .gg-detail dt {
-  color: #64748b;
+  color: #7c8da4;
 }
 
 .gg-detail dd {
@@ -408,7 +408,7 @@
 }
 
 .gg-sky-tick {
-  fill: #475569;
+  fill: #7c8da4;
   font-size: 8px;
 }
 
@@ -621,4 +621,41 @@
   align-items: baseline;
   gap: 8px;
   margin-bottom: 3px;
+}
+
+/* Accessibility: visible keyboard focus, and touch targets of at least 24px (36px on touch screens) */
+:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: 2px;
+}
+
+.gg-list button:focus-visible,
+.gg-visible-list button:focus-visible {
+  outline-offset: -2px;
+}
+
+.gg-panel button,
+.gg-legend-close {
+  min-height: 24px;
+}
+
+.gg-legend-close {
+  min-width: 24px;
+}
+
+@media (pointer: coarse) {
+  .gg-panel button,
+  .gg-primary {
+    min-height: 36px;
+  }
+
+  .gg-help-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .gg-legend-close {
+    min-width: 36px;
+    min-height: 36px;
+  }
 }
