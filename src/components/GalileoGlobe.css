@@ -618,10 +618,11 @@
 }
 
 /* Legend */
-.gg-help-btn {
+.gg-help-btn,
+.gg-menu-btn {
   position: absolute;
   top: 12px;
-  right: 12px;
+  right: 56px;
   width: 28px;
   height: 28px;
   padding: 0;
@@ -634,14 +635,34 @@
   cursor: pointer;
 }
 
-.gg-help-btn:hover {
+.gg-menu-btn {
+  right: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+}
+
+.gg-help-btn {
+  width: 32px;
+  height: 32px;
+}
+
+.gg-help-btn:hover,
+.gg-menu-btn:hover {
   color: #e2e8f0;
+}
+
+/* The panel is hidden until opened with the menu button or by picking something */
+.gg-root:not(.panel-open) .gg-panel {
+  display: none;
 }
 
 .gg-legend {
   position: absolute;
   right: 12px;
-  bottom: 12px;
+  bottom: 80px; /* above the time bar */
   width: min(280px, calc(100% - 24px));
   padding: 12px 14px;
   background: rgba(7, 20, 37, 0.94);
@@ -708,11 +729,13 @@
 
 @media (pointer: coarse) {
   .gg-panel button,
+  .gg-timebar button,
   .gg-primary {
     min-height: 36px;
   }
 
-  .gg-help-btn {
+  .gg-help-btn,
+  .gg-menu-btn {
     width: 36px;
     height: 36px;
   }
@@ -830,7 +853,30 @@
     margin-right: 14px;
   }
 
-  .gg-timebar {
+  /* The sheet header holds the time controls while it is open */
+  .gg-root.panel-open .gg-timebar {
     display: none;
+  }
+
+  .gg-timebar {
+    max-width: calc(100% - 24px);
+    padding: 6px 8px;
+  }
+
+  .gg-timebar > .gg-muted {
+    display: none;
+  }
+
+  .gg-timebar .gg-buttons {
+    flex-wrap: nowrap;
+    gap: 4px;
+  }
+
+  .gg-root:not(.panel-open) .gg-hint {
+    bottom: 84px;
+  }
+
+  .gg-root.panel-open .gg-legend {
+    bottom: 12px;
   }
 }
