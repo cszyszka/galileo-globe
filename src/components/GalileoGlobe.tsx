@@ -28,6 +28,7 @@ import {
 import type { Constellation, Satellite, StatusCategory, GalileoStatus, GalileoStatusEntry, LonLatR, Vec3, LayerKey } from '../lib/satellites';
 import type { Topology, GeometryCollection } from 'topojson-specification';
 import SkyPlot from './SkyPlot';
+import { TOUCH } from '../lib/touch';
 import { ErrorNotice, Legend, LoadingNotice, StaleBanner } from './StageNotices';
 import TimeControls from './TimeControls';
 import { readFlag, writeFlag } from '../lib/storage';
@@ -901,8 +902,8 @@ export default function GalileoGlobe() {
           aria-controls="gg-panel"
           onClick={() => setPanelOpen(open => !open)}
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-            <path d="M2 4h12M2 8h12M2 12h12" />
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
+            <path d="M4.5 5h7M4.5 8h7M4.5 11h7" />
           </svg>
         </button>
         {showTime && (
@@ -911,7 +912,7 @@ export default function GalileoGlobe() {
             <TimeControls speeds={SPEEDS} speed={speed} live={live} onSpeed={s => changeSpeed(s)} onNow={() => changeSpeed(1, true)} />
           </div>
         )}
-        <div className="gg-hint">Drag to rotate · scroll to zoom · click a satellite, or the Earth to pick a location</div>
+        <div className="gg-hint">{TOUCH ? 'Drag to rotate · pinch to zoom · tap a satellite, or the Earth to pick a location' : 'Drag to rotate · scroll to zoom · click a satellite, or the Earth to pick a location'}</div>
       </main>
 
       <aside id="gg-panel" className={`gg-panel gg-sheet-${sheet}${sheetDrag != null ? ' dragging' : ''}`} ref={panelRef}>
