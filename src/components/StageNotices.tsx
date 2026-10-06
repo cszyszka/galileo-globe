@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { GROUP_COLORS, GROUP_NAMES } from '../lib/satellites';
+import { TOUCH } from '../lib/touch';
 
 // Messages shown over the globe while data loads, when it can't load, and when it is stale.
 
@@ -83,7 +84,7 @@ export function Legend() {
             <li><span className="gg-dot" style={{ background: '#94a3b8' }} /> Filled dot, solid ring: usable</li>
             <li><span className="gg-dot gg-hollow" style={{ borderColor: '#94a3b8' }} /> Hollow dot, dashed ring: reported not usable by the Galileo Service Centre</li>
           </ul>
-          <p className="gg-muted">Drag to rotate, scroll or pinch to zoom. Click a satellite for details, or click the Earth to see which satellites are overhead there.</p>
+          <p className="gg-muted">{TOUCH ? 'Drag to rotate, pinch to zoom. Tap a satellite for details, or tap the Earth to see which satellites are overhead there.' : 'Drag to rotate, scroll or pinch to zoom. Click a satellite for details, or click the Earth to see which satellites are overhead there.'}</p>
         </aside>
       )}
     </>

@@ -665,7 +665,8 @@
   bottom: 80px; /* above the time bar */
   width: min(280px, calc(100% - 24px));
   padding: 12px 14px;
-  background: rgba(7, 20, 37, 0.94);
+  z-index: 2;
+  background: #071425;
   border: 1px solid #1e3a5f;
   border-radius: 10px;
   font-size: 12px;
@@ -746,8 +747,15 @@
   }
 }
 
-/* Phones: the panel becomes a bottom sheet over a full-height globe */
-@media (max-width: 800px) {
+/* Narrow landscape screens keep the side panel, just slimmer */
+@media (max-width: 800px) and (orientation: landscape) {
+  .gg-panel {
+    width: 280px;
+  }
+}
+
+/* Portrait phones: the panel becomes a bottom sheet over a full-height globe */
+@media (max-width: 800px) and (orientation: portrait) {
   .gg-root {
     display: block;
     position: relative;
