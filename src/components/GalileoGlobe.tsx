@@ -29,7 +29,6 @@ import {
 import type { Constellation, Satellite, StatusCategory, GalileoStatus, GalileoStatusEntry, LonLatR, Vec3, LayerKey } from '../lib/satellites';
 import type { Topology, GeometryCollection } from 'topojson-specification';
 import SkyPlot from './SkyPlot';
-import { TOUCH } from '../lib/touch';
 import { useTheme } from '../lib/theme';
 import type { ThemePref } from '../lib/theme';
 import { ErrorNotice, Legend, LoadingNotice, StaleBanner } from './StageNotices';
@@ -56,6 +55,7 @@ const DATA_RELOAD_MS = 30 * 60000;
 const STALE_DATA_MS = 12 * 3600000;
 const ELEVATION_MASKS = [0, 5, 10, 15];
 const SHOW_TIME_KEY = 'gg-show-time';
+const TRACE_3D_KEY = 'gg-trace-3d';
 const SHEET_HALF = 0.52; // sheet heights as a share of the window height
 const SHEET_FULL = 0.8;
 const COMPASS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
@@ -95,6 +95,7 @@ interface UiState {
   observer: Observer | null;
   mask: number;
   repeatMode: boolean;
+  trace3d: boolean;
 }
 
 interface ViewState {
@@ -270,6 +271,11 @@ export default function GalileoGlobe() {
   const [autoRotate, setAutoRotate] = useState(() => !window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const [follow, setFollow] = useState(false);
   const [repeatMode, setRepeatMode] = useState(false);
+  const [trace3d, setTrace3dState] = useState(() => readFlag(TRACE_3D_KEY, false));
+  const setTrace3d = (on: boolean) => {
+    setTrace3dState(on);
+    writeFlag(TRACE_3D_KEY, on);
+  };
   const { pref: themePref, theme, setPref: setThemePref } = useTheme();
   const [readout, setReadout] = useState<{ time: Date; bySat: Record<string, SatReadout> }>({ time: new Date(), bySat: {} });
   const [observer, setObserver] = useState<Observer | null>(null);
@@ -292,12 +298,12 @@ export default function GalileoGlobe() {
 
   const clock = useRef({ anchorReal: Date.now(), anchorSim: Date.now(), speed: 1 });
   const view = useRef<ViewState>({ rot: [-10, -25, 0], tgt: [-10, -25, 0], zoom: 1, dragging: false, wasDrag: false, down: null, lastXY: null });
-  const ui = useRef<UiState>({ selectedId: null, hoverId: null, showLabels: false, autoRotate: true, follow: false, visible: {}, statusData: null, showUnusable: true, observer: null, mask: 10, repeatMode: false });
+  const ui = useRef<UiState>({ selectedId: null, hoverId: null, showLabels: false, autoRotate: true, follow: false, visible: {}, statusData: null, showUnusable: true, observer: null, mask: 10, repeatMode: false, trace3d: false });
   const positions = useRef<{ date?: Date; pos?: Record<string, LonLatR> }>({});
 
   useEffect(() => {
-    Object.assign(ui.current, { selectedId, showLabels, autoRotate, follow, visible, statusData: status.data, showUnusable, observer, mask, repeatMode });
-  }, [selectedId, showLabels, autoRotate, follow, visible, status, showUnusable, observer, mask, repeatMode]);
+    Object.assign(ui.current, { selectedId, showLabels, autoRotate, follow, visible, statusData: status.data, showUnusable, observer, mask, repeatMode, trace3d });
+  }, [selectedId, showLabels, autoRotate, follow, visible, status, showUnusable, observer, mask, repeatMode, trace3d]);
 
   const simNow = useCallback(() => {
     const c = clock.current;
@@ -401,6 +407,8 @@ export default function GalileoGlobe() {
     const repeatPath = earth.append('path').attr('fill', 'none').attr('stroke-width', 1.1).attr('stroke-opacity', 0.85).attr('stroke-linejoin', 'round');
 
     const orbitGroup = svg.append('g').attr('fill', 'none');
+    // Earth-fixed 3D trace of the selected satellite: its path at orbit altitude as the Earth turns beneath it
+    const traceRing = svg.append('path').attr('fill', 'none').attr('stroke-width', 1.3).attr('stroke-opacity', 0.9).attr('stroke-linejoin', 'round');
     const nadirLine = svg.append('path').attr('fill', 'none').attr('stroke-width', 0.8).attr('stroke-dasharray', '2 3');
     const sightGroup = svg.append('g').attr('fill', 'none').attr('stroke-width', 1).attr('stroke-linecap', 'round');
     const observerMarker = svg.append('g').attr('class', 'gg-observer').attr('display', 'none');
@@ -454,8 +462,9 @@ export default function GalileoGlobe() {
     let trackKey = '';
     let trackUpdatedAt = 0;
     let repeatTrack: GeoJSON.LineString | null = null;
-    let repeatKey = '';
-    let repeatAt = 0;
+    let traceSamples: [number, number, number][] = [];
+    let traceKey = '';
+    let traceAt = 0;
     let geom: { cx: number; cy: number; R: number } | null = null;
 
     const resize = () => {
@@ -527,6 +536,8 @@ export default function GalileoGlobe() {
 
       // Selected satellite: coverage footprint + ground track
       const repeating = u.repeatMode && !!selSat && groundTrackRepeat(selSat.periodMin) !== null;
+      const tracing = u.trace3d && !!selSat;
+      const focused = repeating || tracing;
       if (selSat && sel) {
         footprintPath.attr('d', pathGen(d3.geoCircle().center([sel[0], sel[1]]).radius(footprintRadiusDeg(sel[2], u.mask))()))
           .style('fill', selSat.color).style('stroke', selSat.color);
@@ -545,36 +556,39 @@ export default function GalileoGlobe() {
           trackKey = selSat.id;
           trackUpdatedAt = performance.now();
         }
-        // Repeat mode: draw the ground track over a whole repeat cycle, restarted every 30 simulated minutes
-        const cycle = repeating ? groundTrackRepeat(selSat.periodMin) : null;
-        if (cycle) {
-          const key = `${selSat.id}`;
-          if (repeatKey !== key || Math.abs(now - repeatAt) > 30 * 60000) {
-            const coords: [number, number][] = [];
-            const steps = cycle.orbits * 120;
-            const spanMs = cycle.orbits * selSat.periodMin * 60000;
+        // Long trace: the repeat cycle (3 orbits when there is none), sampled in Earth-fixed
+        // coordinates and refreshed every 30 simulated minutes. Used by repeat mode and the 3D trace.
+        if (repeating || tracing) {
+          const orbitCount = groundTrackRepeat(selSat.periodMin)?.orbits ?? 3;
+          const key = `${selSat.id}:${orbitCount}`;
+          if (traceKey !== key || Math.abs(now - traceAt) > 30 * 60000) {
+            const samples: [number, number, number][] = [];
+            const steps = orbitCount * 120;
+            const spanMs = orbitCount * selSat.periodMin * 60000;
             for (let i = 0; i <= steps; i++) {
               const t = new Date(now + (i / steps) * spanMs);
               const pv = eciAt(selSat, t);
-              if (pv) {
-                const [lon, lat] = eciToLonLatR([pv.position.x, pv.position.y, pv.position.z], gstime(t));
-                coords.push([lon, lat]);
-              }
+              if (pv) samples.push(eciToLonLatR([pv.position.x, pv.position.y, pv.position.z], gstime(t)));
             }
-            repeatTrack = { type: 'LineString', coordinates: coords };
-            repeatKey = key;
-            repeatAt = now;
+            traceSamples = samples;
+            repeatTrack = { type: 'LineString', coordinates: samples.map(([lon, lat]) => [lon, lat]) };
+            traceKey = key;
+            traceAt = now;
           }
-          repeatPath.attr('d', repeatTrack ? pathGen(repeatTrack) : null).style('stroke', selSat.color);
-          trackPath.attr('d', null);
+        }
+        repeatPath.attr('d', repeating && repeatTrack ? pathGen(repeatTrack) : null).style('stroke', selSat.color);
+        trackPath.attr('d', repeating ? null : track ? pathGen(track) : null).style('stroke', selSat.color);
+        if (tracing) {
+          const pts = traceSamples.map(([lon, lat, r]) => toView(rotate, lon, lat, r / EARTH_RADIUS_KM));
+          traceRing.attr('d', visiblePath(pts, screen) || null).style('stroke', selSat.color);
         } else {
-          repeatPath.attr('d', null);
-          trackPath.attr('d', track ? pathGen(track) : null).style('stroke', selSat.color);
+          traceRing.attr('d', null);
         }
       } else {
         footprintPath.attr('d', null);
         trackPath.attr('d', null);
         repeatPath.attr('d', null);
+        traceRing.attr('d', null);
       }
 
       // Orbits — only the parts not hidden behind the Earth disk
@@ -589,7 +603,7 @@ export default function GalileoGlobe() {
           .attr('d', shown(s) && d ? d : null)
           .attr('stroke-width', isSel ? 2 : 1)
           .attr('stroke-dasharray', unusable(s) ? '4 5' : null)
-          .attr('stroke-opacity', isSel ? 0.95 : repeating ? 0.05 : u.selectedId != null ? 0.12 : 0.35);
+          .attr('stroke-opacity', isSel ? 0.95 : focused ? 0.05 : u.selectedId != null ? 0.12 : 0.35);
       });
 
       // Satellites & labels
@@ -603,7 +617,7 @@ export default function GalileoGlobe() {
       satNodes
         .attr('transform', s => { const sp = screenPos[s.id]; return sp ? `translate(${sp.xy[0]},${sp.xy[1]})` : null; })
         .attr('display', s => (screenPos[s.id] && !screenPos[s.id].hidden ? null : 'none'))
-        .attr('opacity', s => (u.selectedId == null || s.id === u.selectedId ? 1 : repeating ? 0.25 : 0.55));
+        .attr('opacity', s => (u.selectedId == null || s.id === u.selectedId ? 1 : focused ? 0.25 : 0.55));
       // Satellites not usable for service are drawn hollow
       satNodes.select('.dot')
         .style('fill', s => (unusable(s) ? 'var(--gg-bg)' : s.color))
@@ -989,7 +1003,6 @@ export default function GalileoGlobe() {
             <TimeControls speeds={SPEEDS} speed={speed} live={live} onSpeed={s => changeSpeed(s)} onNow={() => changeSpeed(1, true)} />
           </div>
         )}
-        <div className="gg-hint">{TOUCH ? 'Drag to rotate · pinch to zoom · tap a satellite, or the Earth to pick a location' : 'Drag to rotate · scroll to zoom · click a satellite, or the Earth to pick a location'}</div>
       </main>
 
       <aside id="gg-panel" className={`gg-panel gg-sheet-${sheet}${sheetDrag != null ? ' dragging' : ''}`} ref={panelRef}>
@@ -1268,6 +1281,7 @@ export default function GalileoGlobe() {
         <section>
           <h2>View</h2>
           <label><input type="checkbox" checked={showTime} onChange={e => setShowTime(e.target.checked)} /> Show time controls</label>
+          <label><input type="checkbox" checked={trace3d} onChange={e => setTrace3d(e.target.checked)} /> 3D orbit trace for selected</label>
           <label><input type="checkbox" checked={autoRotate} onChange={e => setAutoRotate(e.target.checked)} /> Auto-rotate</label>
           <label><input type="checkbox" checked={showLabels} onChange={e => setShowLabels(e.target.checked)} /> Show all labels</label>
           <label>

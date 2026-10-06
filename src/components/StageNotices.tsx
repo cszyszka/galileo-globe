@@ -74,6 +74,7 @@ export function Legend() {
             <strong>How to read the globe</strong>
             <button className="gg-legend-close" aria-label="Close legend" onClick={close}>×</button>
           </div>
+          <h3>Orbits and markers</h3>
           <p className="gg-muted">Each ring is an orbit; the dots are satellites moving along it. Colour shows the orbit group.</p>
           <ul className="gg-legend-list">
             {GROUP_NAMES.map((name, i) => (
@@ -84,7 +85,22 @@ export function Legend() {
             <li><span className="gg-dot" style={{ background: 'var(--gg-muted)' }} /> Filled dot, solid ring: usable</li>
             <li><span className="gg-dot gg-hollow" style={{ borderColor: 'var(--gg-muted)' }} /> Hollow dot, dashed ring: reported not usable by the Galileo Service Centre</li>
           </ul>
-          <p className="gg-muted">{TOUCH ? 'Drag to rotate, pinch to zoom. Tap a satellite for details, or tap the Earth to see which satellites are overhead there.' : 'Drag to rotate, scroll or pinch to zoom. Click a satellite for details, or click the Earth to see which satellites are overhead there.'}</p>
+
+          <h3>Moving around</h3>
+          <p className="gg-muted">{TOUCH
+            ? 'Drag to rotate, pinch to zoom. Tap a satellite for details, or tap the Earth to pick a location and see which satellites are overhead there.'
+            : 'Drag to rotate, scroll or pinch to zoom. Click a satellite for details, or click the Earth to pick a location and see which satellites are overhead there.'}</p>
+
+          <h3>A selected satellite</h3>
+          <ul className="gg-legend-bullets">
+            <li>The shaded area is the ground that sees it above the elevation mask.</li>
+            <li>The dashed line on the Earth is its ground track for the next orbit; the dotted line runs from the satellite to the point beneath it.</li>
+            <li>Its details show how often the ground track repeats (Galileo: every 10 days, 17 orbits). “Show the full repeat cycle” draws all of it and dims the other satellites.</li>
+            <li>Settings › View › “3D orbit trace for selected” draws its path at orbit altitude as the Earth turns beneath it.</li>
+          </ul>
+
+          <h3>Appearance</h3>
+          <p className="gg-muted">The sun and moon button switches between light and dark. Settings › Appearance can also follow your device.</p>
         </aside>
       )}
     </>
