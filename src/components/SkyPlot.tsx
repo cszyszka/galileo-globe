@@ -49,14 +49,13 @@ export default function SkyPlot({ items, mask, selectedId, onSelect }: SkyPlotPr
         return (
           <g key={it.id} transform={`translate(${x},${y})`} className="gg-sky-sat" onClick={() => onSelect(it.id)}>
             <title>{`${it.name} — el ${it.el.toFixed(0)}°, az ${it.az.toFixed(0)}°`}</title>
-            {selected && <circle r={8} fill="none" stroke={it.color} strokeWidth={1.2} />}
+            {selected && <circle r={8} fill="none" style={{ stroke: it.color }} strokeWidth={1.2} />}
             <circle
               r={4}
-              fill={it.hollow ? 'var(--gg-bg, #071425)' : it.color}
-              stroke={it.hollow ? it.color : '#071425'}
+              style={{ fill: it.hollow ? 'var(--gg-panel)' : it.color, stroke: it.hollow ? it.color : 'var(--gg-panel)' }}
               strokeWidth={it.hollow ? 1.8 : 1}
             />
-            <text x={6} y={-5} fill={it.color} className="gg-sky-label">{it.label}</text>
+            <text x={6} y={-5} style={{ fill: it.color }} className="gg-sky-label">{it.label}</text>
           </g>
         );
       })}

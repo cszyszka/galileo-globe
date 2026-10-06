@@ -29,6 +29,8 @@ import type { Constellation, Satellite, StatusCategory, GalileoStatus, GalileoSt
 import type { Topology, GeometryCollection } from 'topojson-specification';
 import SkyPlot from './SkyPlot';
 import { TOUCH } from '../lib/touch';
+import { useTheme } from '../lib/theme';
+import type { ThemePref } from '../lib/theme';
 import { ErrorNotice, Legend, LoadingNotice, StaleBanner } from './StageNotices';
 import TimeControls from './TimeControls';
 import { readFlag, writeFlag } from '../lib/storage';
@@ -246,6 +248,7 @@ export default function GalileoGlobe() {
   // People who ask for reduced motion start with the globe still.
   const [autoRotate, setAutoRotate] = useState(() => !window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const [follow, setFollow] = useState(false);
+  const { pref: themePref, theme, setPref: setThemePref } = useTheme();
   const [readout, setReadout] = useState<{ time: Date; bySat: Record<string, SatReadout> }>({ time: new Date(), bySat: {} });
   const [observer, setObserver] = useState<Observer | null>(null);
   const [mask, setMask] = useState(10);
@@ -358,15 +361,15 @@ export default function GalileoGlobe() {
     const defs = svg.append('defs');
     // Atmosphere: fades from the surface to ATMOSPHERE_KM altitude (stops are set per frame).
     const atmoGradient = defs.append('radialGradient').attr('id', 'gg-atmo').attr('gradientUnits', 'userSpaceOnUse');
-    const atmoInner = atmoGradient.append('stop').attr('stop-color', '#7dd3fc').attr('stop-opacity', 0.55);
-    atmoGradient.append('stop').attr('offset', 1).attr('stop-color', '#60a5fa').attr('stop-opacity', 0);
+    const atmoInner = atmoGradient.append('stop').style('stop-color', 'var(--gg-atmo-in)').attr('stop-opacity', 0.55);
+    atmoGradient.append('stop').attr('offset', 1).style('stop-color', 'var(--gg-atmo-out)').attr('stop-opacity', 0);
 
     const atmosphere = svg.append('circle').attr('fill', 'url(#gg-atmo)');
-    const ocean = svg.append('circle').attr('fill', '#0d1f35');
+    const ocean = svg.append('circle').style('fill', 'var(--gg-ocean)');
     const earth = svg.append('g');
-    const graticulePath = earth.append('path').attr('fill', 'none').attr('stroke', '#1a3a5c').attr('stroke-width', 0.4);
+    const graticulePath = earth.append('path').attr('fill', 'none').style('stroke', 'var(--gg-grat)').attr('stroke-width', 0.4);
     const landGroup = earth.append('g');
-    const nightPath = earth.append('path').attr('fill', 'rgba(0,0,0,0.42)');
+    const nightPath = earth.append('path').style('fill', 'var(--gg-night)');
     const footprintPath = earth.append('path').attr('fill-opacity', 0.12).attr('stroke-opacity', 0.6).attr('stroke-width', 1);
     const trackPath = earth.append('path').attr('fill', 'none').attr('stroke-width', 1.2).attr('stroke-dasharray', '3 3');
 
@@ -374,15 +377,15 @@ export default function GalileoGlobe() {
     const nadirLine = svg.append('line').attr('stroke-width', 0.8).attr('stroke-dasharray', '2 3');
     const sightGroup = svg.append('g').attr('fill', 'none').attr('stroke-width', 1).attr('stroke-linecap', 'round');
     const observerMarker = svg.append('g').attr('class', 'gg-observer').attr('display', 'none');
-    observerMarker.append('circle').attr('r', 9).attr('fill', 'none').attr('stroke', '#f8fafc').attr('stroke-opacity', 0.5);
-    observerMarker.append('circle').attr('r', 3.5).attr('fill', '#f8fafc').attr('stroke', '#050e1a').attr('stroke-width', 1.5);
+    observerMarker.append('circle').attr('r', 9).attr('fill', 'none').style('stroke', 'var(--gg-marker)').attr('stroke-opacity', 0.5);
+    observerMarker.append('circle').attr('r', 3.5).style('fill', 'var(--gg-marker)').style('stroke', 'var(--gg-bg)').attr('stroke-width', 1.5);
     const satGroup = svg.append('g');
     const labelGroup = svg.append('g').attr('font-size', 11).attr('font-family', 'ui-monospace, SFMono-Regular, Menlo, monospace');
 
     const orbitPaths = orbitGroup.selectAll<SVGPathElement, Satellite>('path').data(sats, d => d.id).enter().append('path')
-      .attr('stroke', d => d.color).attr('stroke-linecap', 'round');
+      .style('stroke', d => d.color).attr('stroke-linecap', 'round');
     const sightLines = sightGroup.selectAll<SVGPathElement, Satellite>('path').data(sats, d => d.id).enter().append('path')
-      .attr('stroke', d => d.color);
+      .style('stroke', d => d.color);
 
     const satNodes = satGroup.selectAll<SVGGElement, Satellite>('g').data(sats, d => d.id).enter().append('g')
       .attr('class', 'gg-sat')
@@ -393,11 +396,11 @@ export default function GalileoGlobe() {
         setSelectedId(id => (id === d.id ? null : d.id));
       });
     satNodes.append('circle').attr('class', 'hit').attr('r', 12).attr('fill', 'transparent');
-    satNodes.append('circle').attr('class', 'ring').attr('r', 10).attr('fill', 'none').attr('stroke', d => d.color).attr('stroke-width', 1.2);
-    satNodes.append('circle').attr('class', 'dot').attr('r', 4.5).attr('fill', d => d.color).attr('stroke', '#050e1a').attr('stroke-width', 1.5);
+    satNodes.append('circle').attr('class', 'ring').attr('r', 10).attr('fill', 'none').style('stroke', d => d.color).attr('stroke-width', 1.2);
+    satNodes.append('circle').attr('class', 'dot').attr('r', 4.5).style('fill', d => d.color).style('stroke', 'var(--gg-bg)').attr('stroke-width', 1.5);
 
     const labels = labelGroup.selectAll<SVGTextElement, Satellite>('text').data(sats, d => d.id).enter().append('text')
-      .attr('fill', d => d.color).attr('paint-order', 'stroke').attr('stroke', '#050e1a').attr('stroke-width', 3)
+      .style('fill', d => d.color).attr('paint-order', 'stroke').style('stroke', 'var(--gg-bg)').attr('stroke-width', 3)
       .text(d => d.short);
 
     const proj = d3.geoOrthographic();
@@ -413,7 +416,7 @@ export default function GalileoGlobe() {
         land = landGroup.selectAll<SVGPathElement, Country>('path')
           .data(countries.features as Country[])
           .enter().append('path')
-          .attr('fill', '#163355').attr('stroke', '#3a7aa0').attr('stroke-width', 0.5);
+          .style('fill', 'var(--gg-land)').style('stroke', 'var(--gg-coast)').attr('stroke-width', 0.5);
       })
       .catch(() => { /* coastlines are decorative */ });
 
@@ -494,7 +497,7 @@ export default function GalileoGlobe() {
       // Selected satellite: coverage footprint + ground track
       if (selSat && sel) {
         footprintPath.attr('d', pathGen(d3.geoCircle().center([sel[0], sel[1]]).radius(footprintRadiusDeg(sel[2], u.mask))()))
-          .attr('fill', selSat.color).attr('stroke', selSat.color);
+          .style('fill', selSat.color).style('stroke', selSat.color);
         if (trackKey !== selSat.id || Math.abs(performance.now() - trackUpdatedAt) > 500) {
           const coords: [number, number][] = [];
           const steps = 200;
@@ -510,7 +513,7 @@ export default function GalileoGlobe() {
           trackKey = selSat.id;
           trackUpdatedAt = performance.now();
         }
-        trackPath.attr('d', track ? pathGen(track) : null).attr('stroke', selSat.color);
+        trackPath.attr('d', track ? pathGen(track) : null).style('stroke', selSat.color);
       } else {
         footprintPath.attr('d', null);
         trackPath.attr('d', null);
@@ -545,8 +548,8 @@ export default function GalileoGlobe() {
         .attr('opacity', s => (u.selectedId == null || s.id === u.selectedId ? 1 : 0.55));
       // Satellites not usable for service are drawn hollow
       satNodes.select('.dot')
-        .attr('fill', s => (unusable(s) ? '#050e1a' : s.color))
-        .attr('stroke', s => (unusable(s) ? s.color : '#050e1a'));
+        .style('fill', s => (unusable(s) ? 'var(--gg-bg)' : s.color))
+        .style('stroke', s => (unusable(s) ? s.color : 'var(--gg-bg)'));
       satNodes.select('.ring').attr('display', s => (s.id === u.selectedId || s.id === u.hoverId ? null : 'none'));
       labels
         .attr('x', s => (screenPos[s.id] ? screenPos[s.id].xy[0] + 9 : 0))
@@ -563,7 +566,7 @@ export default function GalileoGlobe() {
         const [gx, gy] = screen(ground);
         const [sx, sy] = screenPos[selSat.id].xy;
         nadirLine.attr('display', ground[2] >= 0 ? null : 'none')
-          .attr('x1', sx).attr('y1', sy).attr('x2', gx).attr('y2', gy).attr('stroke', selSat.color);
+          .attr('x1', sx).attr('y1', sy).attr('x2', gx).attr('y2', gy).style('stroke', selSat.color);
       } else {
         nadirLine.attr('display', 'none');
       }
@@ -896,13 +899,28 @@ export default function GalileoGlobe() {
         <StaleBanner stale={staleSources} />
         <Legend />
         <button
+          className="gg-theme-btn"
+          aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+          onClick={() => setThemePref(theme === 'dark' ? 'light' : 'dark')}
+        >
+          {theme === 'dark' ? (
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" aria-hidden="true">
+              <circle cx="10" cy="10" r="3.6" /><path d="M10 2.5v2M10 15.5v2M2.5 10h2M15.5 10h2M4.7 4.7l1.4 1.4M13.9 13.9l1.4 1.4M4.7 15.3l1.4-1.4M13.9 6.1l1.4-1.4" />
+            </svg>
+          ) : (
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M16.5 11.6A7 7 0 0 1 8.4 3.5a7 7 0 1 0 8.1 8.1z" />
+            </svg>
+          )}
+        </button>
+        <button
           className="gg-menu-btn"
           aria-label={panelOpen ? 'Hide panel' : 'Show panel'}
           aria-expanded={panelOpen}
           aria-controls="gg-panel"
           onClick={() => setPanelOpen(open => !open)}
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" aria-hidden="true">
             <path d="M4.5 5h7M4.5 8h7M4.5 11h7" />
           </svg>
         </button>
@@ -1177,6 +1195,16 @@ export default function GalileoGlobe() {
             </label>
           </section>
         )}
+
+        <section>
+          <h2>Appearance</h2>
+          {(['system', 'light', 'dark'] as ThemePref[]).map(p => (
+            <label key={p}>
+              <input type="radio" name="gg-theme" checked={themePref === p} onChange={() => setThemePref(p)} />
+              {p === 'system' ? 'Match device' : p === 'light' ? 'Light (paper)' : 'Dark'}
+            </label>
+          ))}
+        </section>
 
         <section>
           <h2>View</h2>

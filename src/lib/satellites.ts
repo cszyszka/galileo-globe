@@ -78,7 +78,7 @@ export const LAYERS: { key: LayerKey; label: string; note?: string }[] = [
   { key: 'galileoElliptical', label: 'Galileo elliptical' },
   { key: 'leopnt', label: 'LEO-PNT (Celeste)' },
 ];
-export const GROUP_COLORS = ['#60a5fa', '#f59e0b', '#34d399', '#c084fc', '#f87171'];
+export const GROUP_COLORS = ['var(--gg-p1)', 'var(--gg-p2)', 'var(--gg-p3)', 'var(--gg-p4)', 'var(--gg-p5)'];
 const LEO_PNT_GROUP = 4;
 const ECCENTRIC_GROUP = 3;
 
@@ -111,7 +111,7 @@ export async function loadGalileoStatus(): Promise<GalileoStatus> {
   return (await fetchData('galileo-status.json')).json();
 }
 
-export const STATUS_COLORS: Record<StatusCategory, string> = { ok: '#34d399', bad: '#f87171', testing: '#fbbf24', unknown: '#64748b' };
+export const STATUS_COLORS: Record<StatusCategory, string> = { ok: 'var(--gg-good)', bad: 'var(--gg-bad)', testing: 'var(--gg-warn)', unknown: 'var(--gg-faint)' };
 
 export function statusCategory(status?: string): StatusCategory {
   if (!status) return 'unknown';

@@ -81,8 +81,8 @@ export function Legend() {
             ))}
           </ul>
           <ul className="gg-legend-list">
-            <li><span className="gg-dot" style={{ background: '#94a3b8' }} /> Filled dot, solid ring: usable</li>
-            <li><span className="gg-dot gg-hollow" style={{ borderColor: '#94a3b8' }} /> Hollow dot, dashed ring: reported not usable by the Galileo Service Centre</li>
+            <li><span className="gg-dot" style={{ background: 'var(--gg-muted)' }} /> Filled dot, solid ring: usable</li>
+            <li><span className="gg-dot gg-hollow" style={{ borderColor: 'var(--gg-muted)' }} /> Hollow dot, dashed ring: reported not usable by the Galileo Service Centre</li>
           </ul>
           <p className="gg-muted">{TOUCH ? 'Drag to rotate, pinch to zoom. Tap a satellite for details, or tap the Earth to see which satellites are overhead there.' : 'Drag to rotate, scroll or pinch to zoom. Click a satellite for details, or click the Earth to see which satellites are overhead there.'}</p>
         </aside>
