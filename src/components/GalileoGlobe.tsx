@@ -398,7 +398,7 @@ export default function GalileoGlobe() {
     const repeatPath = earth.append('path').attr('fill', 'none').attr('stroke-width', 1.1).attr('stroke-opacity', 0.85).attr('stroke-linejoin', 'round');
 
     const orbitGroup = svg.append('g').attr('fill', 'none');
-    const nadirLine = svg.append('line').attr('stroke-width', 0.8).attr('stroke-dasharray', '2 3');
+    const nadirLine = svg.append('path').attr('fill', 'none').attr('stroke-width', 0.8).attr('stroke-dasharray', '2 3');
     const sightGroup = svg.append('g').attr('fill', 'none').attr('stroke-width', 1).attr('stroke-linecap', 'round');
     const observerMarker = svg.append('g').attr('class', 'gg-observer').attr('display', 'none');
     observerMarker.append('circle').attr('r', 9).attr('fill', 'none').style('stroke', 'var(--gg-marker)').attr('stroke-opacity', 0.5);
@@ -614,13 +614,13 @@ export default function GalileoGlobe() {
           return u.showLabels || s.id === u.selectedId || s.id === u.hoverId ? null : 'none';
         });
 
-      // Line from selected satellite down to its sub-satellite point
+      // Line from selected satellite down to its sub-satellite point. When that point is on the far
+      // side, the line still shows up to the Earth's edge.
       if (selSat && sel && screenPos[selSat.id] && !screenPos[selSat.id].hidden) {
         const ground = toView(rotate, sel[0], sel[1], 1);
-        const [gx, gy] = screen(ground);
-        const [sx, sy] = screenPos[selSat.id].xy;
-        nadirLine.attr('display', ground[2] >= 0 ? null : 'none')
-          .attr('x1', sx).attr('y1', sy).attr('x2', gx).attr('y2', gy).style('stroke', selSat.color);
+        const sat3 = toView(rotate, sel[0], sel[1], sel[2] / EARTH_RADIUS_KM);
+        const pts = d3.range(17).map(i => lerp3(sat3, ground, i / 16));
+        nadirLine.attr('display', null).attr('d', visiblePath(pts, screen) || null).style('stroke', selSat.color);
       } else {
         nadirLine.attr('display', 'none');
       }
@@ -1255,7 +1255,7 @@ export default function GalileoGlobe() {
           {(['system', 'light', 'dark'] as ThemePref[]).map(p => (
             <label key={p}>
               <input type="radio" name="gg-theme" checked={themePref === p} onChange={() => setThemePref(p)} />
-              {p === 'system' ? 'Match device' : p === 'light' ? 'Light (paper)' : 'Dark'}
+              {p === 'system' ? 'Match device' : p === 'light' ? 'Light' : 'Dark'}
             </label>
           ))}
         </section>
