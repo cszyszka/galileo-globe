@@ -16,6 +16,7 @@ import {
   loadDataMeta,
   statusCategory,
   STATUS_COLORS,
+  groundTrackRepeat,
   parseTle,
   sortSats,
   eciAt,
@@ -93,6 +94,7 @@ interface UiState {
   showUnusable: boolean;
   observer: Observer | null;
   mask: number;
+  repeatMode: boolean;
 }
 
 interface ViewState {
@@ -187,7 +189,14 @@ function formatLatLon(lat: number, lon: number): string {
   return `${Math.abs(lat).toFixed(1)}°${lat >= 0 ? 'N' : 'S'} ${Math.abs(lon).toFixed(1)}°${lon >= 0 ? 'E' : 'W'}`;
 }
 
-function SatDetails({ sat, health, readout, mask }: { sat: Satellite; health: Health; readout?: SatReadout; mask: number }) {
+function repeatLabel(r: { days: number; orbits: number }): string {
+  return `every ${r.days === 1 ? 'sidereal day' : `${r.days} days`} (${r.orbits} orbits)`;
+}
+
+function SatDetails({ sat, health, readout, mask, repeatMode, onRepeatMode }: {
+  sat: Satellite; health: Health; readout?: SatReadout; mask: number; repeatMode: boolean; onRepeatMode: (on: boolean) => void;
+}) {
+  const repeat = groundTrackRepeat(sat.periodMin);
   return (
     <div className="gg-detail" style={{ borderColor: sat.color }}>
       <div className="gg-status-row">
@@ -220,13 +229,25 @@ function SatDetails({ sat, health, readout, mask }: { sat: Satellite; health: He
           {sat.periodMin >= 60 ? `${Math.floor(sat.periodMin / 60)} h ` : ''}
           {Math.round(sat.periodMin % 60)} min
         </dd>
+        <dt>Track repeats</dt><dd>{repeat ? repeatLabel(repeat) : 'no short cycle'}</dd>
         <dt>Inclination</dt><dd>{sat.inclination.toFixed(2)}°</dd>
         <dt>RAAN</dt><dd>{sat.raan.toFixed(1)}°</dd>
         <dt>Eccentricity</dt><dd>{sat.eccentricity.toFixed(4)}</dd>
         <dt>NORAD ID</dt><dd>{sat.id}</dd>
         <dt>TLE epoch</dt><dd>{sat.epoch.toISOString().slice(0, 16).replace('T', ' ')}</dd>
       </dl>
-      <p className="gg-muted gg-small">Shaded area: ground that sees it above {mask}° elevation. Dashed line: ground track for the next orbit.</p>
+      {repeat && (
+        <label className="gg-repeat">
+          <input type="checkbox" checked={repeatMode} onChange={e => onRepeatMode(e.target.checked)} />
+          Show the full repeat cycle
+        </label>
+      )}
+      <p className="gg-muted gg-small">
+        Shaded area: ground that sees it above {mask}° elevation.{' '}
+        {repeat && repeatMode
+          ? `Solid line: the ground track over ${repeat.orbits} orbits. After that the satellite is back over the same ground and the pattern repeats. The other satellites are dimmed.`
+          : 'Dashed line: ground track for the next orbit.'}
+      </p>
     </div>
   );
 }
@@ -248,6 +269,7 @@ export default function GalileoGlobe() {
   // People who ask for reduced motion start with the globe still.
   const [autoRotate, setAutoRotate] = useState(() => !window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const [follow, setFollow] = useState(false);
+  const [repeatMode, setRepeatMode] = useState(false);
   const { pref: themePref, theme, setPref: setThemePref } = useTheme();
   const [readout, setReadout] = useState<{ time: Date; bySat: Record<string, SatReadout> }>({ time: new Date(), bySat: {} });
   const [observer, setObserver] = useState<Observer | null>(null);
@@ -270,12 +292,12 @@ export default function GalileoGlobe() {
 
   const clock = useRef({ anchorReal: Date.now(), anchorSim: Date.now(), speed: 1 });
   const view = useRef<ViewState>({ rot: [-10, -25, 0], tgt: [-10, -25, 0], zoom: 1, dragging: false, wasDrag: false, down: null, lastXY: null });
-  const ui = useRef<UiState>({ selectedId: null, hoverId: null, showLabels: false, autoRotate: true, follow: false, visible: {}, statusData: null, showUnusable: true, observer: null, mask: 10 });
+  const ui = useRef<UiState>({ selectedId: null, hoverId: null, showLabels: false, autoRotate: true, follow: false, visible: {}, statusData: null, showUnusable: true, observer: null, mask: 10, repeatMode: false });
   const positions = useRef<{ date?: Date; pos?: Record<string, LonLatR> }>({});
 
   useEffect(() => {
-    Object.assign(ui.current, { selectedId, showLabels, autoRotate, follow, visible, statusData: status.data, showUnusable, observer, mask });
-  }, [selectedId, showLabels, autoRotate, follow, visible, status, showUnusable, observer, mask]);
+    Object.assign(ui.current, { selectedId, showLabels, autoRotate, follow, visible, statusData: status.data, showUnusable, observer, mask, repeatMode });
+  }, [selectedId, showLabels, autoRotate, follow, visible, status, showUnusable, observer, mask, repeatMode]);
 
   const simNow = useCallback(() => {
     const c = clock.current;
@@ -364,6 +386,9 @@ export default function GalileoGlobe() {
     const atmoInner = atmoGradient.append('stop').style('stop-color', 'var(--gg-atmo-in)').attr('stop-opacity', 0.55);
     atmoGradient.append('stop').attr('offset', 1).style('stop-color', 'var(--gg-atmo-out)').attr('stop-opacity', 0);
 
+    // Labels of satellites behind the Earth are clipped by the Earth's disc (updated every frame)
+    const behindClip = defs.append('clipPath').attr('id', 'gg-behind-clip').append('path').attr('clip-rule', 'evenodd');
+
     const atmosphere = svg.append('circle').attr('fill', 'url(#gg-atmo)');
     const ocean = svg.append('circle').style('fill', 'var(--gg-ocean)');
     const earth = svg.append('g');
@@ -372,9 +397,11 @@ export default function GalileoGlobe() {
     const nightPath = earth.append('path').style('fill', 'var(--gg-night)');
     const footprintPath = earth.append('path').attr('fill-opacity', 0.12).attr('stroke-opacity', 0.6).attr('stroke-width', 1);
     const trackPath = earth.append('path').attr('fill', 'none').attr('stroke-width', 1.2).attr('stroke-dasharray', '3 3');
+    // Full repeat cycle of the selected satellite's ground track (repeat mode)
+    const repeatPath = earth.append('path').attr('fill', 'none').attr('stroke-width', 1.1).attr('stroke-opacity', 0.85).attr('stroke-linejoin', 'round');
 
     const orbitGroup = svg.append('g').attr('fill', 'none');
-    const nadirLine = svg.append('line').attr('stroke-width', 0.8).attr('stroke-dasharray', '2 3');
+    const nadirLine = svg.append('path').attr('fill', 'none').attr('stroke-width', 0.8).attr('stroke-dasharray', '2 3');
     const sightGroup = svg.append('g').attr('fill', 'none').attr('stroke-width', 1).attr('stroke-linecap', 'round');
     const observerMarker = svg.append('g').attr('class', 'gg-observer').attr('display', 'none');
     observerMarker.append('circle').attr('r', 9).attr('fill', 'none').style('stroke', 'var(--gg-marker)').attr('stroke-opacity', 0.5);
@@ -426,6 +453,9 @@ export default function GalileoGlobe() {
     let track: GeoJSON.LineString | null = null;
     let trackKey = '';
     let trackUpdatedAt = 0;
+    let repeatTrack: GeoJSON.LineString | null = null;
+    let repeatKey = '';
+    let repeatAt = 0;
     let geom: { cx: number; cy: number; R: number } | null = null;
 
     const resize = () => {
@@ -489,12 +519,14 @@ export default function GalileoGlobe() {
       atmoInner.attr('offset', R / atmoR);
       atmosphere.attr('cx', cx).attr('cy', cy).attr('r', atmoR);
       ocean.attr('cx', cx).attr('cy', cy).attr('r', R);
+      behindClip.attr('d', `M0,0H${w}V${h}H0Z M${cx - R},${cy}a${R},${R} 0 1,0 ${2 * R},0a${R},${R} 0 1,0 ${-2 * R},0Z`);
       graticulePath.attr('d', pathGen(graticule));
       if (land) land.attr('d', d => pathGen(d));
       const [sunLon, sunLat] = subsolarPoint(date);
       nightPath.attr('d', pathGen(d3.geoCircle().center([sunLon + 180, -sunLat]).radius(90)()));
 
       // Selected satellite: coverage footprint + ground track
+      const repeating = u.repeatMode && !!selSat && groundTrackRepeat(selSat.periodMin) !== null;
       if (selSat && sel) {
         footprintPath.attr('d', pathGen(d3.geoCircle().center([sel[0], sel[1]]).radius(footprintRadiusDeg(sel[2], u.mask))()))
           .style('fill', selSat.color).style('stroke', selSat.color);
@@ -513,10 +545,36 @@ export default function GalileoGlobe() {
           trackKey = selSat.id;
           trackUpdatedAt = performance.now();
         }
-        trackPath.attr('d', track ? pathGen(track) : null).style('stroke', selSat.color);
+        // Repeat mode: draw the ground track over a whole repeat cycle, restarted every 30 simulated minutes
+        const cycle = repeating ? groundTrackRepeat(selSat.periodMin) : null;
+        if (cycle) {
+          const key = `${selSat.id}`;
+          if (repeatKey !== key || Math.abs(now - repeatAt) > 30 * 60000) {
+            const coords: [number, number][] = [];
+            const steps = cycle.orbits * 120;
+            const spanMs = cycle.orbits * selSat.periodMin * 60000;
+            for (let i = 0; i <= steps; i++) {
+              const t = new Date(now + (i / steps) * spanMs);
+              const pv = eciAt(selSat, t);
+              if (pv) {
+                const [lon, lat] = eciToLonLatR([pv.position.x, pv.position.y, pv.position.z], gstime(t));
+                coords.push([lon, lat]);
+              }
+            }
+            repeatTrack = { type: 'LineString', coordinates: coords };
+            repeatKey = key;
+            repeatAt = now;
+          }
+          repeatPath.attr('d', repeatTrack ? pathGen(repeatTrack) : null).style('stroke', selSat.color);
+          trackPath.attr('d', null);
+        } else {
+          repeatPath.attr('d', null);
+          trackPath.attr('d', track ? pathGen(track) : null).style('stroke', selSat.color);
+        }
       } else {
         footprintPath.attr('d', null);
         trackPath.attr('d', null);
+        repeatPath.attr('d', null);
       }
 
       // Orbits — only the parts not hidden behind the Earth disk
@@ -531,7 +589,7 @@ export default function GalileoGlobe() {
           .attr('d', shown(s) && d ? d : null)
           .attr('stroke-width', isSel ? 2 : 1)
           .attr('stroke-dasharray', unusable(s) ? '4 5' : null)
-          .attr('stroke-opacity', isSel ? 0.95 : u.selectedId != null ? 0.12 : 0.35);
+          .attr('stroke-opacity', isSel ? 0.95 : repeating ? 0.05 : u.selectedId != null ? 0.12 : 0.35);
       });
 
       // Satellites & labels
@@ -545,7 +603,7 @@ export default function GalileoGlobe() {
       satNodes
         .attr('transform', s => { const sp = screenPos[s.id]; return sp ? `translate(${sp.xy[0]},${sp.xy[1]})` : null; })
         .attr('display', s => (screenPos[s.id] && !screenPos[s.id].hidden ? null : 'none'))
-        .attr('opacity', s => (u.selectedId == null || s.id === u.selectedId ? 1 : 0.55));
+        .attr('opacity', s => (u.selectedId == null || s.id === u.selectedId ? 1 : repeating ? 0.25 : 0.55));
       // Satellites not usable for service are drawn hollow
       satNodes.select('.dot')
         .style('fill', s => (unusable(s) ? 'var(--gg-bg)' : s.color))
@@ -554,19 +612,20 @@ export default function GalileoGlobe() {
       labels
         .attr('x', s => (screenPos[s.id] ? screenPos[s.id].xy[0] + 9 : 0))
         .attr('y', s => (screenPos[s.id] ? screenPos[s.id].xy[1] - 7 : 0))
+        .attr('clip-path', s => (screenPos[s.id]?.behind ? 'url(#gg-behind-clip)' : null))
         .attr('display', s => {
           const sp = screenPos[s.id];
           if (!sp || sp.hidden) return 'none';
           return u.showLabels || s.id === u.selectedId || s.id === u.hoverId ? null : 'none';
         });
 
-      // Line from selected satellite down to its sub-satellite point
+      // Line from selected satellite down to its sub-satellite point. When that point is on the far
+      // side, the line still shows up to the Earth's edge.
       if (selSat && sel && screenPos[selSat.id] && !screenPos[selSat.id].hidden) {
         const ground = toView(rotate, sel[0], sel[1], 1);
-        const [gx, gy] = screen(ground);
-        const [sx, sy] = screenPos[selSat.id].xy;
-        nadirLine.attr('display', ground[2] >= 0 ? null : 'none')
-          .attr('x1', sx).attr('y1', sy).attr('x2', gx).attr('y2', gy).style('stroke', selSat.color);
+        const sat3 = toView(rotate, sel[0], sel[1], sel[2] / EARTH_RADIUS_KM);
+        const pts = d3.range(17).map(i => lerp3(sat3, ground, i / 16));
+        nadirLine.attr('display', null).attr('d', visiblePath(pts, screen) || null).style('stroke', selSat.color);
       } else {
         nadirLine.attr('display', 'none');
       }
@@ -1139,7 +1198,7 @@ export default function GalileoGlobe() {
                       }}
                     >
                       <div className="gg-expand-inner">
-                        {(open || s.id === closingId) && <SatDetails sat={s} health={health} readout={r} mask={mask} />}
+                        {(open || s.id === closingId) && <SatDetails sat={s} health={health} readout={r} mask={mask} repeatMode={repeatMode} onRepeatMode={setRepeatMode} />}
                       </div>
                     </div>
                   </li>
@@ -1201,7 +1260,7 @@ export default function GalileoGlobe() {
           {(['system', 'light', 'dark'] as ThemePref[]).map(p => (
             <label key={p}>
               <input type="radio" name="gg-theme" checked={themePref === p} onChange={() => setThemePref(p)} />
-              {p === 'system' ? 'Match device' : p === 'light' ? 'Light (paper)' : 'Dark'}
+              {p === 'system' ? 'Match device' : p === 'light' ? 'Light' : 'Dark'}
             </label>
           ))}
         </section>

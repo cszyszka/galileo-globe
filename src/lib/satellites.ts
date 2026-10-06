@@ -196,6 +196,25 @@ export function eciAt(sat: Satellite, date: Date): Eci | null {
   return { position: pv.position, velocity: pv.velocity };
 }
 
+export const SIDEREAL_DAY_MIN = 1436.0682;
+
+export interface GroundTrackRepeat {
+  days: number;
+  orbits: number;
+}
+
+// How long until the ground track repeats: the smallest whole number of sidereal days that holds a
+// whole number of orbits. Galileo is 17 orbits in 10 days; a GPS-style orbit is 2 orbits in a day.
+// Returns null for orbits with no short repeat (a tight tolerance avoids false matches).
+export function groundTrackRepeat(periodMin: number, maxDays = 12, tolerance = 0.0003): GroundTrackRepeat | null {
+  for (let days = 1; days <= maxDays; days++) {
+    const span = days * SIDEREAL_DAY_MIN;
+    const orbits = Math.round(span / periodMin);
+    if (orbits >= 1 && Math.abs(orbits * periodMin - span) / span < tolerance) return { days, orbits };
+  }
+  return null;
+}
+
 // One full revolution sampled in ECI (km), starting at `date`.
 export function sampleOrbit(sat: Satellite, date: Date, steps = 180): Vec3[] {
   const pts: Vec3[] = [];
