@@ -266,18 +266,30 @@
 
 .gg-list button {
   display: grid;
-  grid-template-columns: 9px 78px 1fr auto;
+  grid-template-columns: 9px 82px minmax(0, 1fr) auto;
   align-items: baseline;
-  gap: 8px;
+  gap: 6px;
   width: 100%;
   text-align: left;
   background: transparent;
   border-color: transparent;
-  padding: 3px 6px;
+  padding: 3px 4px;
+}
+
+.gg-list button > span {
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.gg-list button > .gg-muted {
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .gg-name {
   font-family: var(--gg-mono);
+  font-size: 12px;
   color: var(--gg-text);
 }
 

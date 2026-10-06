@@ -111,7 +111,7 @@ export async function loadGalileoStatus(): Promise<GalileoStatus> {
   return (await fetchData('galileo-status.json')).json();
 }
 
-export const STATUS_COLORS: Record<StatusCategory, string> = { ok: '#34d399', bad: '#f87171', testing: '#fbbf24', unknown: '#64748b' };
+export const STATUS_COLORS: Record<StatusCategory, string> = { ok: 'var(--gg-good)', bad: 'var(--gg-bad)', testing: 'var(--gg-warn)', unknown: 'var(--gg-faint)' };
 
 export function statusCategory(status?: string): StatusCategory {
   if (!status) return 'unknown';
