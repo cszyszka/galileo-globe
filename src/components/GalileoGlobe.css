@@ -911,3 +911,10 @@
     bottom: 12px;
   }
 }
+
+.gg-repeat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 8px;
+}

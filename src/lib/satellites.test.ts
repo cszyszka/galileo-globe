@@ -6,6 +6,7 @@ import {
   eciAt,
   eciToLonLatR,
   footprintRadiusDeg,
+  groundTrackRepeat,
   parseTle,
   sampleOrbit,
   sortSats,
@@ -176,5 +177,25 @@ describe('footprintRadiusDeg', () => {
 
   it('is ~0 when the elevation mask is the zenith', () => {
     expect(footprintRadiusDeg(EARTH_RADIUS_KM + 800, 90)).toBeCloseTo(0, 6);
+  });
+});
+
+describe('groundTrackRepeat', () => {
+  it('finds the Galileo cycle: 17 orbits in 10 sidereal days', () => {
+    expect(groundTrackRepeat(844.7)).toEqual({ days: 10, orbits: 17 });
+  });
+
+  it('finds a GPS-style cycle: 2 orbits in 1 sidereal day', () => {
+    expect(groundTrackRepeat(717.97)).toEqual({ days: 1, orbits: 2 });
+  });
+
+  it('returns null when there is no short repeat', () => {
+    expect(groundTrackRepeat(600)).toBeNull();
+  });
+
+  it('matches the regular Galileo satellites in the fixture', () => {
+    const regular = parseTle(galileoTle, 'galileo').filter(s => !s.elliptical);
+    expect(regular.length).toBeGreaterThan(0);
+    for (const s of regular) expect(groundTrackRepeat(s.periodMin)).toEqual({ days: 10, orbits: 17 });
   });
 });
