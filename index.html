@@ -6,7 +6,14 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>Galileo Constellation: live 3D satellite view</title>
     <meta name="description" content="Explore Europe's Galileo navigation satellites in real time, in an interactive 3D globe. See which satellites are overhead from your location." />
-    <meta name="theme-color" content="#050e1a" />
+    <meta name="theme-color" content="#111923" />
+    <script>
+      // Apply the saved appearance before first paint so there is no flash of the wrong theme.
+      try {
+        var t = localStorage.getItem('gg-theme');
+        if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    </script>
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Galileo Constellation" />
     <meta property="og:title" content="Galileo Constellation: live 3D satellite view" />

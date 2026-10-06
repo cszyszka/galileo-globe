@@ -9,5 +9,5 @@
 body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-family: system-ui, sans-serif;
+  font-family: var(--gg-sans);
 }

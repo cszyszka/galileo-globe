@@ -78,7 +78,7 @@ export const LAYERS: { key: LayerKey; label: string; note?: string }[] = [
   { key: 'galileoElliptical', label: 'Galileo elliptical' },
   { key: 'leopnt', label: 'LEO-PNT (Celeste)' },
 ];
-export const GROUP_COLORS = ['#60a5fa', '#f59e0b', '#34d399', '#c084fc', '#f87171'];
+export const GROUP_COLORS = ['var(--gg-p1)', 'var(--gg-p2)', 'var(--gg-p3)', 'var(--gg-p4)', 'var(--gg-p5)'];
 const LEO_PNT_GROUP = 4;
 const ECCENTRIC_GROUP = 3;
 
