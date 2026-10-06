@@ -386,6 +386,9 @@ export default function GalileoGlobe() {
     const atmoInner = atmoGradient.append('stop').style('stop-color', 'var(--gg-atmo-in)').attr('stop-opacity', 0.55);
     atmoGradient.append('stop').attr('offset', 1).style('stop-color', 'var(--gg-atmo-out)').attr('stop-opacity', 0);
 
+    // Labels of satellites behind the Earth are clipped by the Earth's disc (updated every frame)
+    const behindClip = defs.append('clipPath').attr('id', 'gg-behind-clip').append('path').attr('clip-rule', 'evenodd');
+
     const atmosphere = svg.append('circle').attr('fill', 'url(#gg-atmo)');
     const ocean = svg.append('circle').style('fill', 'var(--gg-ocean)');
     const earth = svg.append('g');
@@ -516,6 +519,7 @@ export default function GalileoGlobe() {
       atmoInner.attr('offset', R / atmoR);
       atmosphere.attr('cx', cx).attr('cy', cy).attr('r', atmoR);
       ocean.attr('cx', cx).attr('cy', cy).attr('r', R);
+      behindClip.attr('d', `M0,0H${w}V${h}H0Z M${cx - R},${cy}a${R},${R} 0 1,0 ${2 * R},0a${R},${R} 0 1,0 ${-2 * R},0Z`);
       graticulePath.attr('d', pathGen(graticule));
       if (land) land.attr('d', d => pathGen(d));
       const [sunLon, sunLat] = subsolarPoint(date);
@@ -608,6 +612,7 @@ export default function GalileoGlobe() {
       labels
         .attr('x', s => (screenPos[s.id] ? screenPos[s.id].xy[0] + 9 : 0))
         .attr('y', s => (screenPos[s.id] ? screenPos[s.id].xy[1] - 7 : 0))
+        .attr('clip-path', s => (screenPos[s.id]?.behind ? 'url(#gg-behind-clip)' : null))
         .attr('display', s => {
           const sp = screenPos[s.id];
           if (!sp || sp.hidden) return 'none';
