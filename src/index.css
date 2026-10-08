@@ -17,3 +17,34 @@ body {
 #root {
   width: 100%;
 }
+
+/* Shown by ErrorBoundary when rendering fails. */
+.gg-crash {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 100dvh;
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--gg-muted);
+  background: var(--gg-bg);
+}
+
+.gg-crash-title {
+  color: var(--gg-text);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.gg-crash button {
+  margin-top: 6px;
+  padding: 8px 18px;
+  color: var(--gg-btn-ink);
+  background: var(--gg-btn);
+  border: 0;
+  border-radius: 6px;
+  font: inherit;
+  cursor: pointer;
+}

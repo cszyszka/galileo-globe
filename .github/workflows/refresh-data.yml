@@ -9,6 +9,11 @@ on:
 permissions:
   contents: read
 
+# A manual run and a scheduled one never overlap, so the second can't fail its push on the first's commit.
+concurrency:
+  group: refresh-data
+  cancel-in-progress: false
+
 jobs:
   refresh:
     runs-on: ubuntu-latest
