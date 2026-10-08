@@ -1,0 +1,19 @@
+# Weekly update PRs for npm packages and for the pinned GitHub Actions (Dependabot keeps the
+# commit hashes and their version comments in sync). Minor and patch bumps are grouped into one PR.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      npm-minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ['*']
