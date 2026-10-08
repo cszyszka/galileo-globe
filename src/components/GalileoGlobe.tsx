@@ -266,7 +266,11 @@ export default function GalileoGlobe() {
     writeFlag(TRACE_3D_KEY, on);
   };
   const { pref: themePref, theme, setPref: setThemePref } = useTheme();
-  const [readout, setReadout] = useState<{ time: Date; bySat: Record<string, SatReadout> }>({ time: new Date(), bySat: {} });
+  // `now` is the wall-clock time of the last tick, so render can compare against it without calling Date.now().
+  const [readout, setReadout] = useState<{ time: Date; now: number; bySat: Record<string, SatReadout> }>(() => {
+    const now = Date.now();
+    return { time: new Date(now), now, bySat: {} };
+  });
   const [observer, setObserver] = useState<Observer | null>(null);
   const [mask, setMask] = useState(10);
   const [geoError, setGeoError] = useState<string | null>(null);
@@ -285,7 +289,8 @@ export default function GalileoGlobe() {
   const headRef = useRef<HTMLDivElement>(null);
   const grip = useRef<{ y: number; h: number; moved: boolean } | null>(null);
 
-  const clock = useRef({ anchorReal: Date.now(), anchorSim: Date.now(), speed: 1 });
+  const [startedAt] = useState(Date.now);
+  const clock = useRef({ anchorReal: startedAt, anchorSim: startedAt, speed: 1 });
   const view = useRef<ViewState>({ rot: [-10, -25, 0], tgt: [-10, -25, 0], zoom: 1, dragging: false, wasDrag: false, down: null, lastXY: null });
   const ui = useRef<UiState>({ selectedId: null, hoverId: null, showLabels: false, autoRotate: true, follow: false, visible: {}, statusData: null, showUnusable: true, observer: null, mask: 10, trace3d: false });
   const positions = useRef<{ date?: Date; pos?: Record<string, LonLatR> }>({});
@@ -724,7 +729,7 @@ export default function GalileoGlobe() {
           };
         }
       }
-      setReadout({ time: date, bySat });
+      setReadout({ time: date, now: Date.now(), bySat });
     };
     tick();
     const id = setInterval(tick, 400);
@@ -889,9 +894,9 @@ export default function GalileoGlobe() {
     ...Object.entries(meta.sources).flatMap(([key, src]) => (src.ok && src.fetchedAt ? [{ label: `${SOURCES[key].label} orbit data`, at: src.fetchedAt }] : [])),
     ...(status.data ? [{ label: 'Galileo service status', at: status.data.fetchedAt }] : []),
   ]
-    .map(x => ({ label: x.label, ageMs: Date.now() - Date.parse(x.at) }))
+    .map(x => ({ label: x.label, ageMs: readout.now - Date.parse(x.at) }))
     .filter(x => x.ageMs > STALE_DATA_MS);
-  const live = speed === 1 && Math.abs(readout.time.getTime() - Date.now()) < 2000;
+  const live = speed === 1 && Math.abs(readout.time.getTime() - readout.now) < 2000;
 
   // Satellites above the observer's elevation mask, highest first
   const inView = observer
