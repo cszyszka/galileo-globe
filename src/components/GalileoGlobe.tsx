@@ -49,7 +49,9 @@ const MAX_ZOOM = 5;
 const clampZoom = (z: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z));
 // Auto-rotation, in degrees of longitude per frame.
 const AUTO_ROTATE_STEP = 0.08 / 3;
-// How often an open page re-reads the data files (they're refreshed on the server every ~2 h).
+// How often the globe redraws when nothing on it is visibly moving.
+const IDLE_FRAME_MS = 500;
+// How often an open page re-reads the data files (they're refreshed on the server every ~6 h).
 const DATA_RELOAD_MS = 30 * 60000;
 // Show a warning when orbit data is older than this (the scheduled refresh has stopped working).
 const STALE_DATA_MS = 12 * 3600000;
@@ -288,15 +290,20 @@ export default function GalileoGlobe() {
   };
   const headRef = useRef<HTMLDivElement>(null);
   const grip = useRef<{ y: number; h: number; moved: boolean } | null>(null);
+  // Set when the next selection shouldn't scroll the panel to the satellite's row.
+  const skipScroll = useRef(false);
 
   const [startedAt] = useState(Date.now);
   const clock = useRef({ anchorReal: startedAt, anchorSim: startedAt, speed: 1 });
   const view = useRef<ViewState>({ rot: [-10, -25, 0], tgt: [-10, -25, 0], zoom: 1, dragging: false, wasDrag: false, down: null, lastXY: null });
   const ui = useRef<UiState>({ selectedId: null, hoverId: null, showLabels: false, autoRotate: true, follow: false, visible: {}, statusData: null, showUnusable: true, observer: null, mask: 10, trace3d: false });
   const positions = useRef<{ date?: Date; pos?: Record<string, LonLatR> }>({});
+  // Set when something the scene shows has changed, so the next frame redraws even while idle.
+  const redraw = useRef(true);
 
   useEffect(() => {
     Object.assign(ui.current, { selectedId, showLabels, autoRotate, follow, visible, statusData: status.data, showUnusable, observer, mask, trace3d });
+    redraw.current = true;
   }, [selectedId, showLabels, autoRotate, follow, visible, status, showUnusable, observer, mask, trace3d]);
 
   const simNow = useCallback(() => {
@@ -307,6 +314,7 @@ export default function GalileoGlobe() {
   const changeSpeed = (s: number, resetToNow = false) => {
     const now = Date.now();
     clock.current = { anchorReal: now, anchorSim: resetToNow ? now : simNow(), speed: s };
+    redraw.current = true;
     setSpeed(s);
   };
 
@@ -416,11 +424,12 @@ export default function GalileoGlobe() {
 
     const satNodes = satGroup.selectAll<SVGGElement, Satellite>('g').data(sats, d => d.id).enter().append('g')
       .attr('class', 'gg-sat')
-      .on('mouseenter', (_, d) => { ui.current.hoverId = d.id; })
-      .on('mouseleave', () => { ui.current.hoverId = null; })
+      .on('mouseenter', (_, d) => { ui.current.hoverId = d.id; redraw.current = true; })
+      .on('mouseleave', () => { ui.current.hoverId = null; redraw.current = true; })
       .on('click', (e, d) => {
         e.stopPropagation();
         setSelectedId(id => (id === d.id ? null : d.id));
+        setObserver(null); // a satellite or a place, not both
       });
     satNodes.append('circle').attr('class', 'hit').attr('r', 12).attr('fill', 'transparent');
     satNodes.append('circle').attr('class', 'ring').attr('r', 10).attr('fill', 'none').style('stroke', d => d.color).attr('stroke-width', 1.2);
@@ -444,6 +453,7 @@ export default function GalileoGlobe() {
           .data(countries.features as Country[])
           .enter().append('path')
           .style('fill', 'var(--gg-land)').style('stroke', 'var(--gg-coast)').attr('stroke-width', 0.5);
+        redraw.current = true;
       })
       .catch(() => { /* coastlines are decorative */ });
 
@@ -464,13 +474,32 @@ export default function GalileoGlobe() {
       size.w = el.clientWidth;
       size.h = el.clientHeight;
       svg.attr('viewBox', `0 0 ${size.w} ${size.h}`);
+      redraw.current = true;
     };
     resize();
     const ro = new ResizeObserver(resize);
     ro.observe(stageRef.current!);
 
-    const frame = () => {
+    // Redraw every frame while something is visibly moving: a drag or pinch, the camera easing,
+    // auto-rotation, or sped-up time. Otherwise the satellites creep along so slowly that a few
+    // redraws a second look the same and save a lot of work (and battery on phones).
+    let drawnAt = -Infinity;
+    let drawnZoom = v.zoom;
+    const loop = (t: number) => {
       if (!mounted) return;
+      raf = requestAnimationFrame(loop);
+      const u = ui.current;
+      const spinning = u.autoRotate && !(u.follow && u.selectedId != null);
+      const moving = v.dragging || spinning || clock.current.speed !== 1 || v.zoom !== drawnZoom
+        || Math.abs(v.tgt[0] - v.rot[0]) > 0.01 || Math.abs(v.tgt[1] - v.rot[1]) > 0.01;
+      if (!moving && !redraw.current && t - drawnAt < IDLE_FRAME_MS) return;
+      redraw.current = false;
+      drawnAt = t;
+      drawnZoom = v.zoom;
+      frame();
+    };
+
+    const frame = () => {
       const { w, h } = size;
       const cx = w / 2, cy = h / 2;
       const R = (Math.min(w, h) / 2 / FIT) * v.zoom;
@@ -653,10 +682,8 @@ export default function GalileoGlobe() {
           .attr('stroke-opacity', isSel ? 0.95 : 0.45)
           .attr('stroke-width', isSel ? 1.6 : 0.9);
       });
-
-      raf = requestAnimationFrame(frame);
     };
-    frame();
+    raf = requestAnimationFrame(loop);
 
     // Click on the Earth picks an observer location; click on empty space deselects.
     svg.on('click', e => {
@@ -664,7 +691,10 @@ export default function GalileoGlobe() {
       const [x, y] = d3.pointer(e, svg.node());
       if (Math.hypot(x - geom.cx, y - geom.cy) <= geom.R) {
         const inv = proj.invert?.([x, y]);
-        if (inv) setObserver({ lon: inv[0], lat: inv[1] });
+        if (inv) {
+          setObserver({ lon: inv[0], lat: inv[1] });
+          setSelectedId(null);
+        }
       } else {
         setSelectedId(null);
       }
@@ -832,8 +862,14 @@ export default function GalileoGlobe() {
     ? `${sheetDrag}px`
     : sheet === 'collapsed' ? `${headH}px` : sheet === 'half' ? `max(${headH}px, ${SHEET_HALF * 100}dvh)` : `${SHEET_FULL * 100}dvh`;
 
-  const focusOn = (id: string) => {
+  // Picking a satellite clears the chosen place, except when it is picked from that place's own
+  // list or sky plot.
+  // That list is where the person is looking, so the panel also stays put rather than scrolling
+  // to the satellite's details.
+  const focusOn = (id: string, keepObserver = false) => {
     setSelectedId(id);
+    if (!keepObserver) setObserver(null);
+    else if (id !== selectedId) skipScroll.current = true;
     const p = positions.current.pos?.[id];
     if (p) {
       view.current.tgt[0] = -p[0];
@@ -869,22 +905,20 @@ export default function GalileoGlobe() {
   if (prevSelectedId !== selectedId) {
     setPrevSelectedId(selectedId);
     setClosingId(prevSelectedId);
-    if (selectedId != null) {
-      reveal();
-      if (observer) setObserver(null); // a satellite or a place, not both
-    }
+    if (selectedId != null) reveal();
   }
   if (prevObserver !== observer) {
     setPrevObserver(observer);
-    if (observer) {
-      reveal();
-      if (selectedId != null) setSelectedId(null);
-    }
+    if (observer) reveal();
   }
 
   // Bring the opened row into view once it has expanded (also when picked on the globe).
   useEffect(() => {
     if (selectedId == null) return;
+    if (skipScroll.current) {
+      skipScroll.current = false;
+      return;
+    }
     const id = setTimeout(() => {
       panelRef.current?.querySelector(`[data-sat-id="${selectedId}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }, 320);
@@ -921,6 +955,7 @@ export default function GalileoGlobe() {
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
         setObserver({ lat: coords.latitude, lon: coords.longitude });
+        setSelectedId(null);
         view.current.tgt[0] = -coords.longitude;
         view.current.tgt[1] = -coords.latitude;
         setAutoRotate(false);
@@ -1080,7 +1115,7 @@ export default function GalileoGlobe() {
               <SkyPlot
                 mask={mask}
                 selectedId={selectedId}
-                onSelect={focusOn}
+                onSelect={id => focusOn(id, true)}
                 items={inView.map(({ s, look, health }) => ({
                   id: s.id,
                   name: s.short,
@@ -1102,7 +1137,7 @@ export default function GalileoGlobe() {
                   </li>
                   {inView.map(({ s, look, health }) => (
                     <li key={s.id}>
-                      <button className={s.id === selectedId ? 'active' : ''} aria-pressed={s.id === selectedId} onClick={() => focusOn(s.id)}>
+                      <button className={s.id === selectedId ? 'active' : ''} aria-pressed={s.id === selectedId} onClick={() => focusOn(s.id, true)}>
                         <span
                           className={`gg-dot${health.category === 'bad' ? ' gg-hollow' : ''}`}
                           style={health.category === 'bad' ? { borderColor: s.color } : { background: s.color }}
