@@ -8,9 +8,12 @@ import '@fontsource/atkinson-hyperlegible-mono/latin-600.css'
 import './theme.css'
 import './index.css'
 import App from './App'
+import ErrorBoundary from './components/ErrorBoundary'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </StrictMode>,
 )

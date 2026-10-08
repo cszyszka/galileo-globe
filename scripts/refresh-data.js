@@ -3,6 +3,8 @@
 //
 //   npm run data:refresh            # skips sources fetched in the last hour
 //   npm run data:refresh -- --force # fetch everything now
+//   ... -- --if-stale                # only sources older than 12 hours (used by `npm run dev`, so
+//                                    # the committed files, which CI refreshes, normally stay untouched)
 //   ... -- --accept-drop             # accept a big drop in satellite count (see validate-data.js)
 //
 // Output (public/data/):
@@ -25,10 +27,14 @@ const OUT_DIR = new URL('../public/data/', import.meta.url);
 const META_FILE = 'meta.json';
 // CelesTrak asks clients not to download data more often than it changes (a few times a day).
 const MIN_INTERVAL_MS = 60 * 60 * 1000;
+// With --if-stale: the age at which the app starts warning that data is out of date.
+const STALE_INTERVAL_MS = 12 * 60 * 60 * 1000;
 const USER_AGENT = 'globe-visualization data refresh (Galileo / LEO-PNT viewer)';
 
 const force = process.argv.includes('--force');
 const acceptDrop = process.argv.includes('--accept-drop');
+const ifStale = process.argv.includes('--if-stale');
+const minInterval = ifStale ? STALE_INTERVAL_MS : MIN_INTERVAL_MS;
 
 // Fewer satellites than this means the source is broken (Galileo has ~30 in orbit).
 // LEO-PNT may legitimately be empty, e.g. if CelesTrak renames the objects.
@@ -88,14 +94,16 @@ async function main() {
   const meta = await readMeta();
   const now = new Date();
   let failures = 0;
+  let ran = 0;
 
   for (const job of JOBS) {
     const prev = meta.sources[job.key];
     const age = prev?.fetchedAt ? now - Date.parse(prev.fetchedAt) : Infinity;
-    if (!force && !prev?.error && age < MIN_INTERVAL_MS) {
+    if (!force && !prev?.error && age < minInterval) {
       console.log(`skip  ${job.file.padEnd(20)} fetched ${Math.round(age / 60000)} min ago`);
       continue;
     }
+    ran++;
     try {
       const { contents, count, warnings } = await job.run({ previous: prev?.count ?? 0, acceptDrop });
       await writeAtomic(job.file, contents);
@@ -117,6 +125,8 @@ async function main() {
     }
   }
 
+  // Nothing fetched: leave meta.json as it is, so a skipped run changes no files.
+  if (!ran) return;
   meta.generatedAt = now.toISOString();
   await writeAtomic(META_FILE, JSON.stringify(meta, null, 2) + '\n');
   if (failures) process.exitCode = 1;
