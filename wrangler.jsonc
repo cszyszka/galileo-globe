@@ -1,0 +1,13 @@
+// Cloudflare Worker that serves the built site as static assets. Workers Builds runs
+// `npm run build` and then `npx wrangler deploy` with this file.
+{
+  "name": "galileo",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist"
+  },
+  // Serve only on the custom domain (galileo.spacecone.dev), not on *.workers.dev, and no
+  // public preview URLs for non-production versions.
+  "workers_dev": false,
+  "preview_urls": false
+}
