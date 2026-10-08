@@ -4,10 +4,16 @@
 
 * {
   margin: 0;
+  padding: 0;
 }
 
 body {
+  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-family: var(--gg-sans);
+}
+
+#root {
+  width: 100%;
 }

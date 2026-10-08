@@ -54,6 +54,11 @@ deploys on every push to `main`, including the data refresh commits.
 
 `.github/workflows/ci.yml` runs lint, typecheck, tests and a build on pull requests.
 
+`wrangler.jsonc` holds the Worker settings: the `dist/` assets, and no `*.workers.dev` address or
+preview URLs, so the site is served only on the custom domain. `public/_headers` sets the security
+headers (Content-Security-Policy, `X-Frame-Options`, `nosniff`, `Referrer-Policy`,
+`Permissions-Policy`); a new external script or connection must be added to the CSP there.
+
 ## Credits
 
 Orbital elements: [CelesTrak](https://celestrak.org). Service status: European GNSS Service

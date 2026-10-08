@@ -7,13 +7,7 @@
     <title>About &amp; credits · Galileo Constellation</title>
     <meta name="description" content="Data sources, credits and copyright for the Galileo Constellation live satellite globe." />
     <meta name="theme-color" content="#111923" />
-    <script>
-      // Apply the saved appearance before first paint (same choice as the globe).
-      try {
-        var t = localStorage.getItem('gg-theme');
-        if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
-      } catch (e) {}
-    </script>
+    <script src="/theme-init.js"></script>
     <script type="module" src="/src/about.ts"></script>
     <style>
       *, *::before, *::after { box-sizing: border-box; }

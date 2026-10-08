@@ -13,6 +13,18 @@ function cellText(html) {
     .trim();
 }
 
+// Notice links come from scraped HTML and end up as link targets in the page, so only https
+// links on the GSC site are kept (never javascript: or other schemes).
+export function safeGscUrl(href) {
+  try {
+    const url = new URL(href.replace(/&amp;/g, '&'), GSC_URL);
+    const host = url.hostname;
+    return url.protocol === 'https:' && (host === 'gsc-europa.eu' || host.endsWith('.gsc-europa.eu')) ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
 export function parseGalileoStatus(html) {
   const table = html.match(/<table[^>]*table-striped[^>]*>([\s\S]*?)<\/table>/i);
   if (!table) throw new Error('GSC status table not found');
@@ -25,7 +37,7 @@ export function parseGalileoStatus(html) {
     const [name, svid, clock, status, nagu, naguType, naguSubject] = cells.map(cellText);
     if (!/^GSAT\d{4}$/.test(name)) continue;
     const href = (cells[4] ?? '').match(/href="([^"]+)"/)?.[1];
-    const naguUrl = href ? new URL(href, GSC_URL).href : null;
+    const naguUrl = href ? safeGscUrl(href) : null;
     satellites[name] = {
       svid,
       clock,
