@@ -95,7 +95,7 @@ export function Legend() {
           <ul className="gg-legend-bullets">
             <li>The shaded area is the ground that sees it above the elevation mask.</li>
             <li>The dashed line on the Earth is its ground track for the next orbit; the dotted line runs from the satellite to the point beneath it.</li>
-            <li>Its details show how often the ground track repeats (Galileo: every 10 days, 17 orbits). “Show the full repeat cycle” draws all of it and dims the other satellites.</li>
+            <li>Its details show how often the ground track repeats (Galileo: every 10 days, 17 orbits).</li>
             <li>Settings › View › “3D orbit trace for selected” draws its path at orbit altitude as the Earth turns beneath it.</li>
           </ul>
 
