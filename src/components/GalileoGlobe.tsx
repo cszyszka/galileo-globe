@@ -49,6 +49,9 @@ const MAX_ZOOM = 5;
 const clampZoom = (z: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z));
 // Auto-rotation, in degrees of longitude per frame.
 const AUTO_ROTATE_STEP = 0.08 / 3;
+// Tap/click radius (px) around a satellite marker, and the smaller one used over the Earth.
+const SAT_HIT_R = 12;
+const SAT_HIT_R_OVER_EARTH = 6;
 // How often the globe redraws when nothing on it is visibly moving.
 const IDLE_FRAME_MS = 500;
 // How often an open page re-reads the data files (they're refreshed on the server every ~6 h).
@@ -431,7 +434,7 @@ export default function GalileoGlobe() {
         setSelectedId(id => (id === d.id ? null : d.id));
         setObserver(null); // a satellite or a place, not both
       });
-    satNodes.append('circle').attr('class', 'hit').attr('r', 12).attr('fill', 'transparent');
+    satNodes.append('circle').attr('class', 'hit').attr('r', SAT_HIT_R).attr('fill', 'transparent');
     satNodes.append('circle').attr('class', 'ring').attr('r', 10).attr('fill', 'none').style('stroke', d => d.color).attr('stroke-width', 1.2);
     satNodes.append('circle').attr('class', 'dot').attr('r', 4.5).style('fill', d => d.color).style('stroke', 'var(--gg-bg)').attr('stroke-width', 1.5);
 
@@ -638,6 +641,12 @@ export default function GalileoGlobe() {
         .style('fill', s => (unusable(s) ? 'var(--gg-bg)' : s.color))
         .style('stroke', s => (unusable(s) ? s.color : 'var(--gg-bg)'));
       satNodes.select('.ring').attr('display', s => (s.id === u.selectedId || s.id === u.hoverId ? null : 'none'));
+      // Over the Earth's disc only the dot itself is a target, so low satellites (LEO-PNT, which
+      // sit almost on the surface) don't swallow taps meant for picking a place on a small globe.
+      satNodes.select('.hit').attr('r', s => {
+        const sp = screenPos[s.id];
+        return sp && Math.hypot(sp.xy[0] - cx, sp.xy[1] - cy) < R ? SAT_HIT_R_OVER_EARTH : SAT_HIT_R;
+      });
       labels
         .attr('x', s => (screenPos[s.id] ? screenPos[s.id].xy[0] + 9 : 0))
         .attr('y', s => (screenPos[s.id] ? screenPos[s.id].xy[1] - 7 : 0))
@@ -1041,9 +1050,32 @@ export default function GalileoGlobe() {
               if (e.key === 'ArrowDown') setSheet(sheet === 'full' ? 'half' : 'collapsed');
             }}
           />
-          <div className="gg-tabs" role="tablist" aria-label="Panel">
-            <button role="tab" id="gg-tab-satellites" aria-selected={tab === 'satellites'} aria-controls="gg-tabpanel" onClick={() => pickTab('satellites')}>Satellites</button>
-            <button role="tab" id="gg-tab-settings" aria-selected={tab === 'settings'} aria-controls="gg-tabpanel" onClick={() => pickTab('settings')}>Settings</button>
+          {/* Standard tabs keyboard pattern: one Tab stop, arrow keys (and Home/End) switch tabs. */}
+          <div
+            className="gg-tabs"
+            role="tablist"
+            aria-label="Panel"
+            onKeyDown={e => {
+              const next = { ArrowLeft: 'satellites', ArrowRight: 'settings', Home: 'satellites', End: 'settings' }[e.key] as typeof tab | undefined;
+              if (!next) return;
+              e.preventDefault();
+              pickTab(next);
+              document.getElementById(`gg-tab-${next}`)?.focus();
+            }}
+          >
+            {(['satellites', 'settings'] as const).map(t => (
+              <button
+                key={t}
+                role="tab"
+                id={`gg-tab-${t}`}
+                aria-selected={tab === t}
+                aria-controls="gg-tabpanel"
+                tabIndex={tab === t ? 0 : -1}
+                onClick={() => pickTab(t)}
+              >
+                {t === 'satellites' ? 'Satellites' : 'Settings'}
+              </button>
+            ))}
           </div>
           {showTime && (
             <div className="gg-sheet-time">

@@ -24,7 +24,7 @@ npm run dev
 
 | Command | What it does |
 | --- | --- |
-| `npm run dev` | Refreshes the data (falls back to existing files on failure), then starts Vite |
+| `npm run dev` | Refreshes any data older than 12 hours (falls back to existing files on failure), then starts Vite |
 | `npm run build` | Typechecks, then builds into `dist/` |
 | `npm run preview` | Serves the production build locally |
 | `npm run typecheck` | Runs the TypeScript compiler without emitting |
