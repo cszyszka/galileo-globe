@@ -9,6 +9,11 @@ updates:
     groups:
       npm-minor-and-patch:
         update-types: [minor, patch]
+    ignore:
+      # `typescript` is deliberately TypeScript 6 (the API typescript-eslint needs); `tsc` comes from
+      # the `@typescript/native` alias. Drop this when typescript-eslint supports TypeScript 7.
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: github-actions
     directory: /
