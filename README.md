@@ -32,6 +32,11 @@ npm run dev
 | `npm test` | Runs the Vitest unit tests |
 | `npm run data:refresh` | Downloads TLEs and status into `public/data/` (`-- --force` ignores the 1-hour cache) |
 
+TypeScript 7 does the type checking (`tsc`, installed as the `@typescript/native` alias). TypeScript 7
+has no JavaScript API yet, so the `typescript` package is Microsoft's TypeScript 6 compatibility build
+(`@typescript/typescript6`, with a `tsc6` binary), which typescript-eslint needs. When typescript-eslint
+supports TypeScript 7, `typescript` can move to 7 and the alias can go.
+
 ## Data
 
 The app reads static files from `public/data/` rather than calling CelesTrak or the GSC from
