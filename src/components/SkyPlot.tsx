@@ -25,6 +25,8 @@ export interface SkyItem {
   el: number;
   color: string;
   hollow: boolean;
+  // Below the elevation mask: plotted for reference but not counted, so drawn faded
+  masked: boolean;
 }
 
 interface SkyPlotProps {
@@ -65,7 +67,7 @@ export default function SkyPlot({ items, mask, selectedId, onSelect }: SkyPlotPr
         const [x, y] = toXY(it.az, it.el);
         const selected = it.id === selectedId;
         return (
-          <g key={it.id} transform={`translate(${x},${y})`} className="gg-sky-sat">
+          <g key={it.id} transform={`translate(${x},${y})`} className="gg-sky-sat" opacity={it.masked ? 0.4 : 1}>
             <title>{`${it.name} — el ${it.el.toFixed(0)}°, az ${it.az.toFixed(0)}°`}</title>
             <circle r={HIT_R} fill="transparent" />
             {selected && <circle r={8} fill="none" style={{ stroke: it.color }} strokeWidth={1.2} />}

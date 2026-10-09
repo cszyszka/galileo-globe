@@ -941,18 +941,20 @@ export default function GalileoGlobe() {
     .filter(x => x.ageMs > STALE_DATA_MS);
   const live = speed === 1 && Math.abs(readout.time.getTime() - readout.now) < 2000;
 
-  // Satellites above the observer's elevation mask, highest first
-  const inView = observer
+  // Satellites above the horizon, highest first. Those below the elevation mask are still plotted
+  // (drawn faded) but are not counted as in view.
+  const aboveHorizon = observer
     ? sats
       .flatMap(s => {
         const look = readout.bySat[s.id]?.look;
         const health = healthOf(s, status.data);
-        return look && look.el >= mask && visible[s.layer] && (showUnusable || health.category !== 'bad')
+        return look && look.el >= 0 && visible[s.layer] && (showUnusable || health.category !== 'bad')
           ? [{ s, look, health }]
           : [];
       })
       .sort((a, b) => b.look.el - a.look.el)
     : [];
+  const inView = aboveHorizon.filter(x => x.look.el >= mask);
   const usableGalileoInView = inView.filter(x => x.s.constellation === 'galileo' && x.health.category === 'ok').length;
 
   const useMyLocation = () => {
@@ -1148,7 +1150,7 @@ export default function GalileoGlobe() {
                 mask={mask}
                 selectedId={selectedId}
                 onSelect={id => focusOn(id, true)}
-                items={inView.map(({ s, look, health }) => ({
+                items={aboveHorizon.map(({ s, look, health }) => ({
                   id: s.id,
                   name: s.short,
                   label: health.info?.svid ?? s.alias ?? s.short,
@@ -1156,6 +1158,7 @@ export default function GalileoGlobe() {
                   el: look.el,
                   color: s.color,
                   hollow: health.category === 'bad',
+                  masked: look.el < mask,
                 }))}
               />
               {inView.length > 0 ? (
