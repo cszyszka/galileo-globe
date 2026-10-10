@@ -68,3 +68,15 @@ headers (Content-Security-Policy, `X-Frame-Options`, `nosniff`, `Referrer-Policy
 
 Orbital elements: [CelesTrak](https://celestrak.org). Service status: European GNSS Service
 Centre (GSC). Country outlines: [world-atlas](https://github.com/topojson/world-atlas).
+
+## License
+
+The code is released under the [MIT License](LICENSE). It covers this project's own code and
+assets only:
+
+- The satellite data in `public/data/` comes from CelesTrak and the European GNSS Service Centre
+  and stays under their terms. Keep their attribution if you reuse it.
+- Dependencies keep their own licences, including the fonts (SIL Open Font License 1.1) and the
+  country outlines (world-atlas, ISC, from Natural Earth).
+
+This is an independent project, not affiliated with or endorsed by CelesTrak, EUSPA, the GSC or ESA.
