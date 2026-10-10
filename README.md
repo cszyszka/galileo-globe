@@ -37,6 +37,21 @@ has no JavaScript API yet, so the `typescript` package is Microsoft's TypeScript
 (`@typescript/typescript6`, with a `tsc6` binary), which typescript-eslint needs. When typescript-eslint
 supports TypeScript 7, `typescript` can move to 7 and the alias can go.
 
+## Code layout
+
+| Path | What lives there |
+| --- | --- |
+| `src/components/GalileoGlobe.tsx` | The app: owns the state and wires the globe, hooks and panel together |
+| `src/components/panel/` | The side panel (a bottom sheet on phones): tabs, sections, satellite details |
+| `src/components/` | Overlays on the globe (notices, legend, theme toggle), time controls, the sky plot |
+| `src/globe/` | The d3 globe: SVG layers, the animation loop (`scene.ts`), camera, pointer input |
+| `src/hooks/` | Data loading, the simulated clock, the panel readout, the bottom sheet and other state |
+| `src/lib/` | Pure logic with unit tests: TLE parsing and propagation, geometry, sky view, formatting |
+| `scripts/` | The data refresh and its validation (run by `npm run data:refresh` and the scheduled workflow) |
+
+Each component imports its own stylesheet from next to it; `GalileoGlobe.css` holds the app shell
+and the small utilities shared by all of them.
+
 ## Data
 
 The app reads static files from `public/data/` rather than calling CelesTrak or the GSC from
