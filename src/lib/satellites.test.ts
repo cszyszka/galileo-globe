@@ -3,16 +3,23 @@ import galileoTle from './__fixtures__/galileo.tle?raw';
 import leopntTle from './__fixtures__/leopnt.tle?raw';
 import {
   EARTH_RADIUS_KM,
+  countStatuses,
   eciAt,
   eciToLonLatR,
   footprintRadiusDeg,
   groundTrackRepeat,
+  gstime,
+  healthOf,
+  isShown,
+  lonLatRAt,
   parseTle,
+  sampleEarthFixed,
   sampleOrbit,
   sortSats,
   statusCategory,
   subsolarPoint,
 } from './satellites';
+import type { GalileoStatus } from './satellites';
 
 describe('statusCategory', () => {
   it.each([
@@ -197,5 +204,74 @@ describe('groundTrackRepeat', () => {
     const regular = parseTle(galileoTle, 'galileo').filter(s => !s.elliptical);
     expect(regular.length).toBeGreaterThan(0);
     for (const s of regular) expect(groundTrackRepeat(s.periodMin)).toEqual({ days: 10, orbits: 17 });
+  });
+});
+
+describe('service status', () => {
+  const galileo = parseTle(galileoTle, 'galileo');
+  const [leo] = parseTle(leopntTle, 'leopnt');
+  const status: GalileoStatus = {
+    source: 'https://example.test',
+    fetchedAt: '2026-10-01T00:00:00Z',
+    satellites: {
+      GSAT0101: { svid: 'E11', status: 'USABLE', nagu: null },
+      GSAT0103: { svid: 'E19', status: 'NOT USABLE', nagu: null },
+      GSAT0206: { svid: 'E30', status: 'TESTING', nagu: null },
+      // GSAT0201 is left out: "not listed"
+    },
+  };
+
+  it('reads each Galileo satellite from the GSC table', () => {
+    expect(healthOf(galileo[0], status)).toMatchObject({ category: 'ok', label: 'USABLE', info: { svid: 'E11' } });
+    expect(healthOf(galileo[1], status).category).toBe('bad');
+    expect(healthOf(galileo[3], status)).toMatchObject({ category: 'unknown', label: 'Not listed' });
+  });
+
+  it('is unknown while the status is unavailable', () => {
+    expect(healthOf(galileo[0], null)).toMatchObject({ category: 'unknown', label: 'Unknown' });
+  });
+
+  it('treats LEO-PNT as demonstrators with no service status', () => {
+    expect(healthOf(leo, status)).toMatchObject({ category: 'unknown', label: 'Demonstrator' });
+  });
+
+  it('counts Galileo satellites per category, leaving demonstrators out', () => {
+    expect(countStatuses([...galileo, leo], status)).toEqual({ ok: 1, bad: 1, testing: 1, unknown: 1 });
+  });
+
+  it('hides a satellite whose layer is off, and non-usable ones on request', () => {
+    const shown = (layers: object, showUnusable: boolean, i: number) => isShown(galileo[i], { layers, showUnusable, statusData: status });
+    expect(shown({}, true, 0)).toBe(true); // layers default to shown
+    expect(shown({ galileo: false }, true, 0)).toBe(false);
+    expect(shown({ galileo: true }, false, 0)).toBe(true);
+    expect(shown({ galileo: true }, false, 1)).toBe(false); // NOT USABLE
+    expect(shown({ galileo: true }, true, 1)).toBe(true);
+  });
+});
+
+describe('Earth-fixed positions', () => {
+  const [sat] = parseTle(galileoTle, 'galileo');
+
+  it('matches the ECI position rotated by GMST', () => {
+    const pv = eciAt(sat, sat.epoch)!;
+    const expected = eciToLonLatR([pv.position.x, pv.position.y, pv.position.z], gstime(sat.epoch));
+    expect(lonLatRAt(sat, sat.epoch)).toEqual(expected);
+    // Passing the GMST explicitly gives the same answer.
+    expect(lonLatRAt(sat, sat.epoch, gstime(sat.epoch))).toEqual(expected);
+  });
+
+  it('samples evenly from the start time, inclusive', () => {
+    const start = sat.epoch.getTime();
+    const pts = sampleEarthFixed(sat, start, 60 * 60000, 6);
+    expect(pts).toHaveLength(7);
+    expect(pts[0]).toEqual(lonLatRAt(sat, sat.epoch));
+    expect(pts[6]).toEqual(lonLatRAt(sat, new Date(start + 60 * 60000)));
+  });
+
+  it('does not close the loop after one orbit, because the Earth turns beneath it', () => {
+    const pts = sampleEarthFixed(sat, sat.epoch.getTime(), sat.periodMin * 60000, 60);
+    // ~14 h of Earth rotation shifts the track by roughly 210° of longitude
+    const dLon = Math.abs(((pts[60][0] - pts[0][0] + 540) % 360) - 180);
+    expect(dLon).toBeGreaterThan(90);
   });
 });
