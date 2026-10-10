@@ -1,3 +1,6 @@
+/* App shell: the globe stage beside the panel, the overlays on the stage, and small utilities
+   shared across components. Each component's own styles sit next to it. */
+
 .gg-root {
   display: flex;
   height: 100vh;
@@ -82,59 +85,6 @@
   color: var(--gg-bad);
 }
 
-.gg-panel {
-  display: flex;
-  flex-direction: column;
-  width: 340px;
-  flex-shrink: 0;
-  background: var(--gg-panel);
-  border-left: 1px solid var(--gg-line2);
-}
-
-.gg-sheet-head {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 16px 16px 12px;
-}
-
-.gg-sheet-body {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  padding: 4px 16px 16px;
-}
-
-.gg-grip,
-.gg-sheet-time,
-.gg-peek {
-  display: none;
-}
-
-.gg-tabs {
-  display: flex;
-  gap: 4px;
-  padding: 3px;
-  background: var(--gg-card);
-  border: 1px solid var(--gg-line);
-  border-radius: 11px;
-}
-
-.gg-panel .gg-tabs button {
-  flex: 1;
-  color: var(--gg-faint);
-  background: transparent;
-  border: 0;
-  border-radius: 8px;
-  padding: 6px 10px;
-}
-
-.gg-panel .gg-tabs button[aria-selected='true'] {
-  color: var(--gg-text);
-  background: var(--gg-hover);
-  font-weight: 600;
-}
-
 /* Time controls float over the globe on larger screens */
 .gg-timebar {
   position: absolute;
@@ -172,65 +122,12 @@
   cursor: default;
 }
 
-.gg-panel section {
-  margin-bottom: 18px;
-}
-
-.gg-panel h2 {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 8px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--gg-text);
-}
-
-.gg-panel h2 .gg-muted {
-  text-transform: none;
-  letter-spacing: 0;
-  font-weight: 400;
-}
-
-.gg-panel label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 3px 0;
-  cursor: pointer;
-}
+/* Shared utilities */
 
 .gg-buttons {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-}
-
-.gg-panel button {
-  font: inherit;
-  color: inherit;
-  background: var(--gg-card);
-  border: 1px solid var(--gg-line);
-  border-radius: 6px;
-  padding: 4px 10px;
-  cursor: pointer;
-}
-
-.gg-panel button:hover:not(:disabled) {
-  border-color: var(--gg-accent-line);
-}
-
-.gg-panel button.active {
-  background: var(--gg-hover);
-  border-color: var(--gg-accent);
-  color: var(--gg-text);
-}
-
-.gg-panel button:disabled {
-  opacity: 0.4;
-  cursor: default;
 }
 
 .gg-dot {
@@ -250,377 +147,13 @@
   line-height: 1.5;
 }
 
-.gg-list {
-  list-style: none;
-  padding: 0;
-}
-
-.gg-list button {
-  display: grid;
-  grid-template-columns: 9px 82px minmax(0, 1fr) auto;
-  align-items: baseline;
-  gap: 6px;
-  width: 100%;
-  text-align: left;
-  background: transparent;
-  border-color: transparent;
-  padding: 3px 4px;
-}
-
-.gg-list button > span {
-  min-width: 0;
-  white-space: nowrap;
-}
-
-.gg-list button > .gg-muted {
-  font-size: 12px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.gg-name {
-  font-family: var(--gg-mono);
-  font-size: 12px;
-  color: var(--gg-text);
-}
-
-.gg-pos {
-  font-family: var(--gg-mono);
-  font-size: 11px;
-  color: var(--gg-muted);
-  font-variant-numeric: tabular-nums;
-}
-
-.gg-detail {
-  margin: 4px 0 10px 23px;
-  border: 1px solid;
-  border-left-width: 3px;
-  border-radius: 8px;
-  padding: 12px;
-  background: var(--gg-card);
-}
-
-/* Details slide open below the selected row */
-.gg-expand {
-  display: grid;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows 280ms ease;
-}
-
-.gg-expand.open {
-  grid-template-rows: 1fr;
-}
-
-.gg-expand-inner {
-  min-height: 0;
-  overflow: hidden;
-}
-
-.gg-expand-inner > .gg-detail {
-  opacity: 0;
-  transform: translateY(-8px);
-  transition: opacity 220ms ease, transform 280ms ease;
-}
-
-.gg-expand.open .gg-detail {
-  opacity: 1;
-  transform: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .gg-expand,
-  .gg-expand-inner > .gg-detail {
-    transition: none;
-  }
-}
-
-.gg-detail dl {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 4px 12px;
-  margin-bottom: 8px;
-}
-
-.gg-detail dt {
-  color: var(--gg-faint);
-}
-
-.gg-detail dd {
-  font-family: var(--gg-mono);
-  font-variant-numeric: tabular-nums;
-  color: var(--gg-text);
-}
-
-
 .gg-hollow {
   background: transparent;
   border: 2px solid;
 }
 
-.gg-status-summary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 14px;
-  margin-bottom: 6px;
-}
+/* Round buttons in the stage's top-right corner: legend, theme, panel */
 
-.gg-status-summary > span {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.gg-status-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.gg-badge {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  padding: 1px 7px;
-  border: 1px solid;
-  border-radius: 999px;
-  white-space: nowrap;
-}
-
-.gg-nagu {
-  margin-bottom: 10px;
-  color: var(--gg-text2);
-}
-
-.gg-panel a {
-  color: var(--gg-accent2);
-}
-
-/* Visible-from-location section */
-.gg-observer-coords {
-  margin-left: auto;
-  font-family: var(--gg-mono);
-  font-weight: 400;
-  letter-spacing: 0;
-  text-transform: none;
-  color: var(--gg-text2);
-}
-
-.gg-observer-hint {
-  margin-bottom: 8px;
-}
-
-.gg-mask {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.gg-mask button {
-  padding: 2px 8px;
-}
-
-.gg-visible-summary {
-  margin-bottom: 6px;
-  line-height: 1.5;
-}
-
-.gg-visible-summary strong {
-  color: var(--gg-text);
-}
-
-.gg-fix-ok {
-  color: var(--gg-good);
-}
-
-.gg-fix-no {
-  color: var(--gg-warn);
-}
-
-.gg-skyplot {
-  display: block;
-  width: 100%;
-  max-width: 240px;
-  margin: 4px auto 10px;
-  overflow: visible;
-}
-
-.gg-sky-bg {
-  fill: var(--gg-card);
-  stroke: var(--gg-line);
-}
-
-.gg-sky-ring {
-  fill: none;
-  stroke: var(--gg-line);
-  stroke-width: 0.8;
-}
-
-.gg-sky-mask {
-  fill: none;
-  stroke: var(--gg-warn);
-  stroke-opacity: 0.5;
-  stroke-dasharray: 3 3;
-}
-
-.gg-sky-cardinal {
-  fill: var(--gg-muted);
-  font-size: 10px;
-  font-weight: 600;
-  text-anchor: middle;
-  dominant-baseline: central;
-}
-
-.gg-sky-tick {
-  fill: var(--gg-faint);
-  font-size: 8px;
-}
-
-.gg-sky-label {
-  font-size: 9px;
-  font-family: var(--gg-mono);
-  paint-order: stroke;
-  stroke: var(--gg-card);
-  stroke-width: 3px;
-}
-
-.gg-sky-sat {
-  cursor: pointer;
-}
-
-.gg-visible-list button,
-.gg-visible-head {
-  grid-template-columns: 9px 72px 1fr 1fr auto;
-  gap: 6px;
-}
-
-.gg-visible-list .gg-pos {
-  text-align: right;
-  white-space: nowrap;
-}
-
-.gg-visible-head {
-  display: grid;
-  gap: 8px;
-  padding: 0 6px 2px;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.gg-visible-head span:nth-child(n + 3) {
-  text-align: right;
-}
-
-.gg-rising,
-.gg-setting {
-  display: inline-block;
-  width: 10px;
-  margin-left: 2px;
-}
-
-.gg-rising {
-  color: var(--gg-good);
-}
-
-.gg-setting {
-  color: var(--gg-warn);
-}
-
-.gg-observer-actions {
-  margin-top: 8px;
-}
-
-.gg-layer-count {
-  margin-left: auto;
-}
-
-.gg-footer {
-  margin-top: 24px;
-  padding-top: 12px;
-  border-top: 1px solid var(--gg-line2);
-}
-
-/* Loading, error and stale-data notices over the globe */
-.gg-center {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 24px;
-  text-align: center;
-  pointer-events: none;
-}
-
-.gg-center .gg-muted {
-  max-width: 320px;
-}
-
-.gg-center button {
-  pointer-events: auto;
-}
-
-.gg-center-title {
-  color: var(--gg-text);
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.gg-spinner {
-  width: 28px;
-  height: 28px;
-  border: 3px solid var(--gg-line2);
-  border-top-color: var(--gg-accent);
-  border-radius: 50%;
-  animation: gg-spin 0.9s linear infinite;
-}
-
-@keyframes gg-spin {
-  to { transform: rotate(360deg); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .gg-spinner { animation-duration: 3s; }
-}
-
-.gg-primary {
-  margin-top: 4px;
-  padding: 8px 18px;
-  color: var(--gg-btn-ink);
-  background: var(--gg-btn);
-  border: 0;
-  border-radius: 6px;
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.gg-primary:hover {
-  background: var(--gg-btn-hover);
-}
-
-.gg-banner {
-  position: absolute;
-  top: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(560px, calc(100% - 32px));
-  padding: 8px 12px;
-  color: var(--gg-banner-ink);
-  background: var(--gg-banner-bg);
-  border: 1px solid var(--gg-banner-line);
-  border-radius: 8px;
-  font-size: 12px;
-  line-height: 1.4;
-  pointer-events: none;
-}
-
-/* Legend */
 .gg-help-btn,
 .gg-theme-btn,
 .gg-menu-btn {
@@ -667,105 +200,15 @@
   color: var(--gg-text);
 }
 
-/* The panel is hidden until opened with the menu button or by picking something */
-.gg-root:not(.panel-open) .gg-panel {
-  display: none;
-}
-
-.gg-legend {
-  position: absolute;
-  right: 12px;
-  bottom: 80px; /* above the time bar */
-  width: min(340px, calc(100% - 24px));
-  max-height: calc(100% - 130px);
-  overflow-y: auto;
-  padding: 12px 14px;
-  z-index: 2;
-  background: var(--gg-panel);
-  border: 1px solid var(--gg-line);
-  border-radius: 10px;
-  font-size: 12px;
-  line-height: 1.45;
-}
-
-.gg-legend p {
-  margin: 0 0 8px;
-}
-
-.gg-legend h3 {
-  margin: 12px 0 6px;
-  color: var(--gg-text);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.gg-legend-bullets {
-  margin: 0 0 8px;
-  padding-left: 18px;
-  color: var(--gg-muted);
-}
-
-.gg-legend-bullets li {
-  margin-bottom: 4px;
-}
-
-.gg-legend-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 6px;
-  color: var(--gg-text);
-}
-
-.gg-legend-close {
-  padding: 0 4px;
-  color: var(--gg-muted);
-  background: none;
-  border: 0;
-  font-size: 18px;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.gg-legend-list {
-  margin: 0 0 8px;
-  padding: 0;
-  list-style: none;
-}
-
-.gg-legend-list li {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin-bottom: 3px;
-}
-
 /* Accessibility: visible keyboard focus, and touch targets of at least 24px (36px on touch screens) */
+
 :focus-visible {
   outline: 2px solid var(--gg-accent2);
   outline-offset: 2px;
 }
 
-.gg-list button:focus-visible,
-.gg-visible-list button:focus-visible {
-  outline-offset: -2px;
-}
-
-.gg-panel button,
-.gg-legend-close {
-  min-height: 24px;
-}
-
-.gg-legend-close {
-  min-width: 24px;
-}
-
 @media (pointer: coarse) {
-  .gg-panel button,
-  .gg-timebar button,
-  .gg-primary {
+  .gg-timebar button {
     min-height: 36px;
   }
 
@@ -775,21 +218,9 @@
     width: 36px;
     height: 36px;
   }
-
-  .gg-legend-close {
-    min-width: 36px;
-    min-height: 36px;
-  }
 }
 
-/* Narrow landscape screens keep the side panel, just slimmer */
-@media (max-width: 800px) and (orientation: landscape) {
-  .gg-panel {
-    width: 280px;
-  }
-}
-
-/* Portrait phones: the panel becomes a bottom sheet over a full-height globe */
+/* Portrait phones: the stage fills the screen above the bottom sheet (see panel/Panel.css) */
 @media (max-width: 800px) and (orientation: portrait) {
   .gg-root {
     display: block;
@@ -809,93 +240,6 @@
     transition: height 0.25s ease;
   }
 
-  .gg-panel {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 5;
-    width: auto;
-    height: var(--gg-sheet-h);
-    border-left: 0;
-    border-top: 1px solid var(--gg-line2);
-    border-radius: 16px 16px 0 0;
-    box-shadow: 0 -8px 24px var(--gg-shadow);
-    overflow: hidden;
-    transition: height 0.25s ease;
-  }
-
-  .gg-panel.dragging,
-  .gg-panel.dragging ~ .gg-stage {
-    transition: none;
-  }
-
-  .gg-sheet-head {
-    padding: 0 16px 12px;
-    flex-shrink: 0;
-  }
-
-  .gg-panel .gg-grip {
-    display: block;
-    width: 100%;
-    height: 28px;
-    padding: 0;
-    background: transparent;
-    border: 0;
-    cursor: grab;
-    touch-action: none;
-    position: relative;
-  }
-
-  .gg-grip::after {
-    content: '';
-    position: absolute;
-    left: 50%;
-    top: 11px;
-    width: 40px;
-    height: 5px;
-    margin-left: -20px;
-    border-radius: 3px;
-    background: var(--gg-line);
-  }
-
-  .gg-panel .gg-tabs button {
-    min-height: 44px;
-    font-size: 15px;
-  }
-
-  .gg-sheet-time {
-    display: block;
-  }
-
-  .gg-sheet-time .gg-buttons {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-  }
-
-  .gg-sheet-time .gg-buttons button {
-    flex-shrink: 0;
-  }
-
-  .gg-peek {
-    display: block;
-    min-height: 20px;
-    line-height: 1.4;
-  }
-
-  /* The open sheet already shows these numbers in its content */
-  .gg-sheet-half .gg-peek,
-  .gg-sheet-full .gg-peek {
-    display: none;
-  }
-
-  .gg-peek > span:not([class]) {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    margin-right: 14px;
-  }
-
   /* The sheet header holds the time controls while it is open */
   .gg-root.panel-open .gg-timebar {
     display: none;
@@ -913,9 +257,5 @@
   .gg-timebar .gg-buttons {
     flex-wrap: nowrap;
     gap: 4px;
-  }
-
-  .gg-root.panel-open .gg-legend {
-    bottom: 12px;
   }
 }

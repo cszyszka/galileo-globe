@@ -1,0 +1,21 @@
+/* Service-status counts and the "enough for a fix" note (also used in the sheet header) */
+.gg-status-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-bottom: 6px;
+}
+
+.gg-status-summary > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gg-fix-ok {
+  color: var(--gg-good);
+}
+
+.gg-fix-no {
+  color: var(--gg-warn);
+}

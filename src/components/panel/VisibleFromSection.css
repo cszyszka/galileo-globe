@@ -1,0 +1,80 @@
+/* "Visible from" section: the elevation mask, the in-view summary and the list of satellites in view */
+/* Visible-from-location section */
+.gg-observer-coords {
+  margin-left: auto;
+  font-family: var(--gg-mono);
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--gg-text2);
+}
+
+.gg-observer-hint {
+  margin-bottom: 8px;
+}
+
+.gg-mask {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+/* .gg-panel / .gg-list in the selectors below outrank the generic panel button and row rules
+   (panel/Panel.css), whichever stylesheet happens to load first. */
+.gg-panel .gg-mask button {
+  padding: 2px 8px;
+}
+
+.gg-visible-summary {
+  margin-bottom: 6px;
+  line-height: 1.5;
+}
+
+.gg-visible-summary strong {
+  color: var(--gg-text);
+}
+
+.gg-list.gg-visible-list button,
+.gg-visible-head {
+  grid-template-columns: 9px 72px 1fr 1fr auto;
+  gap: 6px;
+}
+
+.gg-visible-list .gg-pos {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.gg-visible-head {
+  display: grid;
+  gap: 8px;
+  padding: 0 6px 2px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.gg-visible-head span:nth-child(n + 3) {
+  text-align: right;
+}
+
+.gg-rising,
+.gg-setting {
+  display: inline-block;
+  width: 10px;
+  margin-left: 2px;
+}
+
+.gg-rising {
+  color: var(--gg-good);
+}
+
+.gg-setting {
+  color: var(--gg-warn);
+}
+
+.gg-observer-actions {
+  margin-top: 8px;
+}

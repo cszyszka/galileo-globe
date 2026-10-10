@@ -1,4 +1,5 @@
 import type { MouseEvent } from 'react';
+import './SkyPlot.css';
 
 // Polar azimuth/elevation plot as seen by the observer: zenith in the centre, horizon on the
 // outer ring, north up and east to the right (as if looking up at the sky with a map overhead).

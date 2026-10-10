@@ -1,0 +1,286 @@
+/* The panel: a sidebar on larger screens, a bottom sheet on portrait phones (sized by
+   useBottomSheet through --gg-sheet-h). Also the building blocks its sections share. */
+
+.gg-panel {
+  display: flex;
+  flex-direction: column;
+  width: 340px;
+  flex-shrink: 0;
+  background: var(--gg-panel);
+  border-left: 1px solid var(--gg-line2);
+}
+
+.gg-sheet-head {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 16px 12px;
+}
+
+.gg-sheet-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 16px 16px;
+}
+
+.gg-grip,
+.gg-sheet-time,
+.gg-peek {
+  display: none;
+}
+
+.gg-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  background: var(--gg-card);
+  border: 1px solid var(--gg-line);
+  border-radius: 11px;
+}
+
+.gg-panel .gg-tabs button {
+  flex: 1;
+  color: var(--gg-faint);
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
+.gg-panel .gg-tabs button[aria-selected='true'] {
+  color: var(--gg-text);
+  background: var(--gg-hover);
+  font-weight: 600;
+}
+
+.gg-panel section {
+  margin-bottom: 18px;
+}
+
+.gg-panel h2 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gg-text);
+}
+
+.gg-panel h2 .gg-muted {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+
+.gg-panel label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  cursor: pointer;
+}
+
+.gg-panel button {
+  font: inherit;
+  color: inherit;
+  background: var(--gg-card);
+  border: 1px solid var(--gg-line);
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.gg-panel button:hover:not(:disabled) {
+  border-color: var(--gg-accent-line);
+}
+
+.gg-panel button.active {
+  background: var(--gg-hover);
+  border-color: var(--gg-accent);
+  color: var(--gg-text);
+}
+
+.gg-panel button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Satellite rows, used by both the visible list and the orbit-group lists */
+
+.gg-list {
+  list-style: none;
+  padding: 0;
+}
+
+.gg-list button {
+  display: grid;
+  grid-template-columns: 9px 82px minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 6px;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border-color: transparent;
+  padding: 3px 4px;
+}
+
+.gg-list button > span {
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.gg-list button > .gg-muted {
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gg-name {
+  font-family: var(--gg-mono);
+  font-size: 12px;
+  color: var(--gg-text);
+}
+
+.gg-pos {
+  font-family: var(--gg-mono);
+  font-size: 11px;
+  color: var(--gg-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.gg-panel a {
+  color: var(--gg-accent2);
+}
+
+.gg-layer-count {
+  margin-left: auto;
+}
+
+.gg-footer {
+  margin-top: 24px;
+  padding-top: 12px;
+  border-top: 1px solid var(--gg-line2);
+}
+
+/* The panel is hidden until opened with the menu button or by picking something */
+.gg-root:not(.panel-open) .gg-panel {
+  display: none;
+}
+
+/* Inset focus ring on full-width rows, so it isn't clipped by the scrolling panel */
+
+.gg-list button:focus-visible,
+.gg-visible-list button:focus-visible {
+  outline-offset: -2px;
+}
+
+.gg-panel button {
+  min-height: 24px;
+}
+
+@media (pointer: coarse) {
+  .gg-panel button {
+    min-height: 36px;
+  }
+}
+
+/* Narrow landscape screens keep the side panel, just slimmer */
+@media (max-width: 800px) and (orientation: landscape) {
+  .gg-panel {
+    width: 280px;
+  }
+}
+
+/* Portrait phones: the panel becomes a bottom sheet over a full-height globe */
+@media (max-width: 800px) and (orientation: portrait) {
+  .gg-panel {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 5;
+    width: auto;
+    height: var(--gg-sheet-h);
+    border-left: 0;
+    border-top: 1px solid var(--gg-line2);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -8px 24px var(--gg-shadow);
+    overflow: hidden;
+    transition: height 0.25s ease;
+  }
+
+  .gg-panel.dragging,
+  .gg-panel.dragging ~ .gg-stage {
+    transition: none;
+  }
+
+  .gg-sheet-head {
+    padding: 0 16px 12px;
+    flex-shrink: 0;
+  }
+
+  .gg-panel .gg-grip {
+    display: block;
+    width: 100%;
+    height: 28px;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    cursor: grab;
+    touch-action: none;
+    position: relative;
+  }
+
+  .gg-grip::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 11px;
+    width: 40px;
+    height: 5px;
+    margin-left: -20px;
+    border-radius: 3px;
+    background: var(--gg-line);
+  }
+
+  .gg-panel .gg-tabs button {
+    min-height: 44px;
+    font-size: 15px;
+  }
+
+  .gg-sheet-time {
+    display: block;
+  }
+
+  .gg-sheet-time .gg-buttons {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+
+  .gg-sheet-time .gg-buttons button {
+    flex-shrink: 0;
+  }
+
+  .gg-peek {
+    display: block;
+    min-height: 20px;
+    line-height: 1.4;
+  }
+
+  /* The open sheet already shows these numbers in its content */
+  .gg-sheet-half .gg-peek,
+  .gg-sheet-full .gg-peek {
+    display: none;
+  }
+
+  .gg-peek > span:not([class]) {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-right: 14px;
+  }
+}
