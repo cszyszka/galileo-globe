@@ -213,8 +213,10 @@
     transition: height 0.25s ease;
   }
 
+  /* Follow the finger exactly while the grip is dragged. The stage comes before the panel in the
+     DOM, so it is reached through the root rather than a sibling combinator. */
   .gg-panel.dragging,
-  .gg-panel.dragging ~ .gg-stage {
+  .gg-root:has(.gg-panel.dragging) .gg-stage {
     transition: none;
   }
 

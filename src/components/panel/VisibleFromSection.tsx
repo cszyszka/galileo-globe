@@ -65,8 +65,9 @@ export default function VisibleFromSection({
             items={aboveHorizon.map(({ s, look, health }) => ({
               id: s.id,
               name: s.short,
-              // The SV ID (E01…) is what receivers show, so prefer it as the short label.
-              label: health.info?.svid ?? s.alias ?? s.short,
+              // The SV ID (E01…) is what receivers show, so prefer it as the short label. `alias` is
+              // '' (not undefined) for names without one, hence || rather than ??.
+              label: health.info?.svid ?? (s.alias || s.short),
               az: look.az,
               el: look.el,
               color: s.color,
