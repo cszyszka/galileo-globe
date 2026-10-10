@@ -1,0 +1,33 @@
+/* Details slide open below the selected row */
+.gg-expand {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 280ms ease;
+}
+
+.gg-expand.open {
+  grid-template-rows: 1fr;
+}
+
+.gg-expand-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.gg-expand-inner > .gg-detail {
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: opacity 220ms ease, transform 280ms ease;
+}
+
+.gg-expand.open .gg-detail {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gg-expand,
+  .gg-expand-inner > .gg-detail {
+    transition: none;
+  }
+}

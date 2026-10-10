@@ -121,6 +121,45 @@ export function statusCategory(status?: string): StatusCategory {
   return 'unknown';
 }
 
+// Service status of one satellite, as shown in the panel. `info` is the GSC row (Galileo only).
+export interface Health {
+  category: StatusCategory;
+  label: string;
+  note?: string;
+  info?: GalileoStatusEntry;
+}
+
+export function healthOf(sat: Satellite, statusData: GalileoStatus | null): Health {
+  if (sat.constellation !== 'galileo') {
+    return { category: 'unknown', label: 'Demonstrator', note: 'In-orbit demonstrator — no public service status' };
+  }
+  if (!statusData) return { category: 'unknown', label: 'Unknown', note: 'Service status unavailable' };
+  const info = statusData.satellites[sat.short];
+  if (!info) return { category: 'unknown', label: 'Not listed', note: 'Not listed by the GNSS Service Centre' };
+  return { category: statusCategory(info.status), label: info.status, info };
+}
+
+export type StatusCounts = Record<StatusCategory, number>;
+
+// How many Galileo satellites are in each service category (demonstrators aren't counted).
+export function countStatuses(sats: Satellite[], statusData: GalileoStatus | null): StatusCounts {
+  const counts: StatusCounts = { ok: 0, bad: 0, testing: 0, unknown: 0 };
+  for (const s of sats) if (s.constellation === 'galileo') counts[healthOf(s, statusData).category]++;
+  return counts;
+}
+
+// What the person has chosen to show. The globe, the sky plot and the visible list all filter
+// through isShown, so they always agree.
+export interface Visibility {
+  layers: Partial<Record<LayerKey, boolean>>;
+  showUnusable: boolean;
+  statusData: GalileoStatus | null;
+}
+
+export function isShown(sat: Satellite, { layers, showUnusable, statusData }: Visibility): boolean {
+  return layers[sat.layer] !== false && (showUnusable || healthOf(sat, statusData).category !== 'bad');
+}
+
 export function parseTle(text: string, constellation: Constellation): Satellite[] {
   const lines = text.split(/\r?\n/).map(l => l.trimEnd()).filter(Boolean);
   const sats: Satellite[] = [];
@@ -222,6 +261,24 @@ export function sampleOrbit(sat: Satellite, date: Date, steps = 180): Vec3[] {
   for (let i = 0; i <= steps; i++) {
     const pv = eciAt(sat, new Date(date.getTime() + (i / steps) * periodMs));
     if (pv) pts.push([pv.position.x, pv.position.y, pv.position.z]);
+  }
+  return pts;
+}
+
+// Earth-fixed lon/lat (deg) and radius (km) at a given date, or null if SGP4 fails. Pass `gmst`
+// when placing many satellites at the same instant, to compute it only once.
+export function lonLatRAt(sat: Satellite, date: Date, gmst = gstime(date)): LonLatR | null {
+  const pv = eciAt(sat, date);
+  return pv ? eciToLonLatR([pv.position.x, pv.position.y, pv.position.z], gmst) : null;
+}
+
+// The satellite's path over `spanMs` from `startMs`, in Earth-fixed coordinates — i.e. with the
+// Earth turning beneath it, unlike sampleOrbit. Used for the ground track and the 3D trace.
+export function sampleEarthFixed(sat: Satellite, startMs: number, spanMs: number, steps: number): LonLatR[] {
+  const pts: LonLatR[] = [];
+  for (let i = 0; i <= steps; i++) {
+    const p = lonLatRAt(sat, new Date(startMs + (i / steps) * spanMs));
+    if (p) pts.push(p);
   }
   return pts;
 }

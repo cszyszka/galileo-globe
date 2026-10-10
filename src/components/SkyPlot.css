@@ -1,0 +1,51 @@
+/* Polar sky plot: zenith in the centre, horizon on the outer ring */
+.gg-skyplot {
+  display: block;
+  width: 100%;
+  max-width: 240px;
+  margin: 4px auto 10px;
+  overflow: visible;
+}
+
+.gg-sky-bg {
+  fill: var(--gg-card);
+  stroke: var(--gg-line);
+}
+
+.gg-sky-ring {
+  fill: none;
+  stroke: var(--gg-line);
+  stroke-width: 0.8;
+}
+
+.gg-sky-mask {
+  fill: none;
+  stroke: var(--gg-warn);
+  stroke-opacity: 0.5;
+  stroke-dasharray: 3 3;
+}
+
+.gg-sky-cardinal {
+  fill: var(--gg-muted);
+  font-size: 10px;
+  font-weight: 600;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+.gg-sky-tick {
+  fill: var(--gg-faint);
+  font-size: 8px;
+}
+
+.gg-sky-label {
+  font-size: 9px;
+  font-family: var(--gg-mono);
+  paint-order: stroke;
+  stroke: var(--gg-card);
+  stroke-width: 3px;
+}
+
+.gg-sky-sat {
+  cursor: pointer;
+}

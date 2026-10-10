@@ -1,0 +1,173 @@
+/* Loading, error and stale-data notices over the globe */
+.gg-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.gg-center .gg-muted {
+  max-width: 320px;
+}
+
+.gg-center button {
+  pointer-events: auto;
+}
+
+.gg-center-title {
+  color: var(--gg-text);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.gg-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--gg-line2);
+  border-top-color: var(--gg-accent);
+  border-radius: 50%;
+  animation: gg-spin 0.9s linear infinite;
+}
+
+@keyframes gg-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gg-spinner { animation-duration: 3s; }
+}
+
+.gg-primary {
+  margin-top: 4px;
+  padding: 8px 18px;
+  color: var(--gg-btn-ink);
+  background: var(--gg-btn);
+  border: 0;
+  border-radius: 6px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.gg-primary:hover {
+  background: var(--gg-btn-hover);
+}
+
+.gg-banner {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(560px, calc(100% - 32px));
+  padding: 8px 12px;
+  color: var(--gg-banner-ink);
+  background: var(--gg-banner-bg);
+  border: 1px solid var(--gg-banner-line);
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+  pointer-events: none;
+}
+
+/* Legend (its button is styled with the other stage buttons in GalileoGlobe.css) */
+
+.gg-legend {
+  position: absolute;
+  right: 12px;
+  bottom: 80px; /* above the time bar */
+  width: min(340px, calc(100% - 24px));
+  max-height: calc(100% - 130px);
+  overflow-y: auto;
+  padding: 12px 14px;
+  z-index: 2;
+  background: var(--gg-panel);
+  border: 1px solid var(--gg-line);
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.gg-legend p {
+  margin: 0 0 8px;
+}
+
+.gg-legend h3 {
+  margin: 12px 0 6px;
+  color: var(--gg-text);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.gg-legend-bullets {
+  margin: 0 0 8px;
+  padding-left: 18px;
+  color: var(--gg-muted);
+}
+
+.gg-legend-bullets li {
+  margin-bottom: 4px;
+}
+
+.gg-legend-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  color: var(--gg-text);
+}
+
+.gg-legend-close {
+  padding: 0 4px;
+  color: var(--gg-muted);
+  background: none;
+  border: 0;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.gg-legend-list {
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
+
+.gg-legend-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 3px;
+}
+
+.gg-legend-close {
+  min-width: 24px;
+}
+
+.gg-legend-close {
+  min-height: 24px;
+}
+
+@media (pointer: coarse) {
+  .gg-primary {
+    min-height: 36px;
+  }
+
+  .gg-legend-close {
+    min-width: 36px;
+    min-height: 36px;
+  }
+}
+
+@media (max-width: 800px) and (orientation: portrait) {
+  .gg-root.panel-open .gg-legend {
+    bottom: 12px;
+  }
+}

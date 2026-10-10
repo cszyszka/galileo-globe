@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { GROUP_COLORS, GROUP_NAMES } from '../lib/satellites';
 import { TOUCH } from '../lib/touch';
+import './StageNotices.css';
 
 // Messages shown over the globe while data loads, when it can't load, and when it is stale.
 
