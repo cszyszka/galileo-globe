@@ -9,7 +9,7 @@ export const MAX_ZOOM = 5;
 export const clampZoom = (z: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z));
 
 // Auto-rotation, in degrees of longitude per frame.
-const AUTO_ROTATE_STEP = 0.08 / 3;
+const AUTO_ROTATE_STEP = 0.02;
 // Share of the remaining distance to the target covered each frame.
 const EASE = 0.08;
 // Keep the poles just short of facing the viewer, where dragging would flip the globe over.
