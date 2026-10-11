@@ -3,21 +3,21 @@
     "tle-galileo": {
       "file": "tle-galileo.txt",
       "url": "https://celestrak.org/NORAD/elements/gp.php?GROUP=galileo&FORMAT=tle",
-      "fetchedAt": "2026-10-10T21:47:11.754Z",
+      "fetchedAt": "2026-10-11T05:50:52.127Z",
       "count": 32
     },
     "tle-leopnt": {
       "file": "tle-leopnt.txt",
       "url": "https://celestrak.org/NORAD/elements/gp.php?NAME=LPNTSAT&FORMAT=tle",
-      "fetchedAt": "2026-10-10T21:47:12.091Z",
+      "fetchedAt": "2026-10-11T05:50:52.218Z",
       "count": 2
     },
     "galileo-status": {
       "file": "galileo-status.json",
       "url": "https://www.gsc-europa.eu/system-service-status/constellation-information",
-      "fetchedAt": "2026-10-10T21:47:13.587Z",
+      "fetchedAt": "2026-10-11T05:50:53.882Z",
       "count": 32
     }
   },
-  "generatedAt": "2026-10-10T21:47:11.307Z"
+  "generatedAt": "2026-10-11T05:50:51.870Z"
 }
