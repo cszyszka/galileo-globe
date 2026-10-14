@@ -48,7 +48,7 @@ export default function SatDetails({ sat, health, readout, mask }: Props) {
         <dt>RAAN</dt><dd>{sat.raan.toFixed(1)}°</dd>
         <dt>Eccentricity</dt><dd>{sat.eccentricity.toFixed(4)}</dd>
         <dt>NORAD ID</dt><dd>{sat.id}</dd>
-        <dt>TLE epoch</dt><dd>{formatEpoch(sat.epoch)}</dd>
+        <dt>Element epoch</dt><dd>{formatEpoch(sat.epoch)}</dd>
       </dl>
       <p className="gg-muted gg-small">
         Shaded area: ground that sees it above {mask}° elevation. Dashed line: ground track for the next orbit.

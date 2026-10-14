@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import galileoTle from './__fixtures__/galileo.tle?raw';
-import leopntTle from './__fixtures__/leopnt.tle?raw';
+import galileoOmm from './__fixtures__/galileo.omm.json?raw';
+import leopntOmm from './__fixtures__/leopnt.omm.json?raw';
 import {
   EARTH_RADIUS_KM,
   countStatuses,
@@ -12,7 +12,7 @@ import {
   healthOf,
   isShown,
   lonLatRAt,
-  parseTle,
+  parseOmm,
   sampleEarthFixed,
   sampleOrbit,
   sortSats,
@@ -36,8 +36,8 @@ describe('statusCategory', () => {
   });
 });
 
-describe('parseTle', () => {
-  const galileo = parseTle(galileoTle, 'galileo');
+describe('parseOmm', () => {
+  const galileo = parseOmm(galileoOmm, 'galileo');
 
   it('parses every satellite in the file', () => {
     expect(galileo.map(s => s.short)).toEqual(['GSAT0101', 'GSAT0103', 'GSAT0206', 'GSAT0201']);
@@ -70,7 +70,7 @@ describe('parseTle', () => {
   });
 
   it('puts LEO-PNT satellites in their own group and layer', () => {
-    const leo = parseTle(leopntTle, 'leopnt');
+    const leo = parseOmm(leopntOmm, 'leopnt');
     expect(leo.length).toBeGreaterThan(0);
     for (const s of leo) {
       expect(s.plane).toBe(4);
@@ -80,20 +80,27 @@ describe('parseTle', () => {
     expect(leo[0].alias).toBe('IOD-1');
   });
 
-  it('handles CRLF line endings and trailing blank lines', () => {
-    const crlf = galileoTle.replace(/\n/g, '\r\n') + '\r\n\r\n';
-    expect(parseTle(crlf, 'galileo')).toHaveLength(4);
+  it('returns nothing for empty, invalid or non-list input', () => {
+    expect(parseOmm('', 'galileo')).toEqual([]);
+    expect(parseOmm('No GP data found', 'galileo')).toEqual([]);
+    expect(parseOmm('[]', 'galileo')).toEqual([]);
+    expect(parseOmm('{"OBJECT_NAME":"x"}', 'galileo')).toEqual([]);
   });
 
-  it('returns nothing for empty or malformed input', () => {
-    expect(parseTle('', 'galileo')).toEqual([]);
-    expect(parseTle('just a name\nnot a tle\nat all', 'galileo')).toEqual([]);
+  it('skips unusable records but keeps the good ones', () => {
+    const good = JSON.parse(galileoOmm);
+    const mixed = [null, 42, { OBJECT_NAME: 'broken' }, { ...good[0], EPOCH: 'not a date' }, ...good];
+    expect(parseOmm(JSON.stringify(mixed), 'galileo')).toHaveLength(4);
+  });
+
+  it('reads the epoch as UTC', () => {
+    expect(galileo[0].epoch.toISOString()).toBe('2026-10-02T04:38:37.595Z'); // EPOCH has no zone suffix
   });
 });
 
 describe('sortSats', () => {
   it('orders by plane then name without mutating the input', () => {
-    const sats = parseTle(galileoTle, 'galileo');
+    const sats = parseOmm(galileoOmm, 'galileo');
     const before = [...sats];
     const sorted = sortSats(sats);
     expect(sats).toEqual(before);
@@ -105,9 +112,9 @@ describe('sortSats', () => {
 });
 
 describe('propagation', () => {
-  const [sat] = parseTle(galileoTle, 'galileo');
+  const [sat] = parseOmm(galileoOmm, 'galileo');
 
-  it('places Galileo at MEO altitude near the TLE epoch', () => {
+  it('places Galileo at MEO altitude near the element epoch', () => {
     const pv = eciAt(sat, sat.epoch)!;
     const r = Math.hypot(pv.position.x, pv.position.y, pv.position.z);
     expect(r).toBeGreaterThan(29000);
@@ -201,15 +208,15 @@ describe('groundTrackRepeat', () => {
   });
 
   it('matches the regular Galileo satellites in the fixture', () => {
-    const regular = parseTle(galileoTle, 'galileo').filter(s => !s.elliptical);
+    const regular = parseOmm(galileoOmm, 'galileo').filter(s => !s.elliptical);
     expect(regular.length).toBeGreaterThan(0);
     for (const s of regular) expect(groundTrackRepeat(s.periodMin)).toEqual({ days: 10, orbits: 17 });
   });
 });
 
 describe('service status', () => {
-  const galileo = parseTle(galileoTle, 'galileo');
-  const [leo] = parseTle(leopntTle, 'leopnt');
+  const galileo = parseOmm(galileoOmm, 'galileo');
+  const [leo] = parseOmm(leopntOmm, 'leopnt');
   const status: GalileoStatus = {
     source: 'https://example.test',
     fetchedAt: '2026-10-01T00:00:00Z',
@@ -250,7 +257,7 @@ describe('service status', () => {
 });
 
 describe('Earth-fixed positions', () => {
-  const [sat] = parseTle(galileoTle, 'galileo');
+  const [sat] = parseOmm(galileoOmm, 'galileo');
 
   it('matches the ECI position rotated by GMST', () => {
     const pv = eciAt(sat, sat.epoch)!;

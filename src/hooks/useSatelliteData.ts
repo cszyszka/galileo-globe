@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { SOURCES, loadDataMeta, loadGalileoStatus, loadTle, parseTle, sortSats } from '../lib/satellites';
+import { SOURCES, loadDataMeta, loadGalileoStatus, loadOmm, parseOmm, sortSats } from '../lib/satellites';
 import type { Constellation, GalileoStatus, Satellite } from '../lib/satellites';
 
 // How often an open page re-reads the data files (they're refreshed on the server every ~6 h).
@@ -19,7 +19,7 @@ export interface StatusState { state: 'loading' | 'ready' | 'error'; data: Galil
 
 const errorMessage = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 
-// Loads the orbit data (one TLE file per source) and the Galileo service status, then re-checks
+// Loads the orbit data (one OMM JSON file per source) and the Galileo service status, then re-checks
 // periodically. `sats` only changes identity when the orbit data actually changed, because a new
 // array rebuilds the whole globe scene.
 export function useSatelliteData() {
@@ -30,15 +30,15 @@ export function useSatelliteData() {
 
   useEffect(() => {
     let cancelled = false;
-    let lastTleKey: string | null = null;
+    let lastOmmKey: string | null = null;
     let lastCount = 0;
     const keys = Object.keys(SOURCES);
 
     const load = async () => {
-      const [dataMeta, statusResult, ...tleResults] = await Promise.allSettled([
+      const [dataMeta, statusResult, ...ommResults] = await Promise.allSettled([
         loadDataMeta(),
         loadGalileoStatus(),
-        ...keys.map(loadTle),
+        ...keys.map(loadOmm),
       ]);
       if (cancelled) return;
       const refresh = dataMeta.status === 'fulfilled' ? dataMeta.value.sources ?? {} : {};
@@ -46,8 +46,8 @@ export function useSatelliteData() {
       // Sources load independently, so one failing doesn't hide the other.
       const sources: Record<string, SourceState> = {};
       const texts: string[] = [];
-      tleResults.forEach((r, i) => {
-        const info = refresh[`tle-${keys[i]}`] ?? ({} as Partial<(typeof refresh)[string]>);
+      ommResults.forEach((r, i) => {
+        const info = refresh[`omm-${keys[i]}`] ?? ({} as Partial<(typeof refresh)[string]>);
         if (r.status === 'fulfilled') {
           texts.push(r.value);
           sources[keys[i]] = { ok: true, fetchedAt: info.fetchedAt ?? null, refreshError: info.error ?? null };
@@ -57,10 +57,10 @@ export function useSatelliteData() {
         }
       });
       // The raw text is the change detector: identical files mean nothing to re-parse.
-      const tleKey = texts.join('\n');
-      if (tleKey !== lastTleKey) {
-        lastTleKey = tleKey;
-        const all = keys.flatMap((k, i) => (texts[i] ? parseTle(texts[i], k as Constellation) : []));
+      const ommKey = texts.join('\n');
+      if (ommKey !== lastOmmKey) {
+        lastOmmKey = ommKey;
+        const all = keys.flatMap((k, i) => (texts[i] ? parseOmm(texts[i], k as Constellation) : []));
         lastCount = all.length;
         setSats(sortSats(all));
       }

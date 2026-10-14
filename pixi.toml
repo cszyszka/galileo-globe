@@ -19,7 +19,7 @@ default = { features = [], solve-group = "default" }
 dev = { features = ["dev"], solve-group = "default" }
 
 [tasks]
-# Downloads TLEs and the Galileo service status into public/data/ (flags: --force, --if-stale, --accept-drop).
+# Downloads orbital elements (OMM) and the Galileo service status into public/data/ (flags: --force, --if-stale, --accept-drop).
 refresh = "python -m data_refresh"
 
 [feature.dev.tasks]
