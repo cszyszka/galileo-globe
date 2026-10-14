@@ -1,7 +1,7 @@
 from typing import NotRequired, TypedDict
 
 
-class TleSource(TypedDict):
+class OrbitSource(TypedDict):
     label: str
     url: str
     file: str
