@@ -3,7 +3,7 @@
 import json
 from pathlib import Path
 
-from .types import TleSource
+from .types import OrbitSource
 
 ROOT = Path(__file__).resolve().parent.parent
-ORBIT_SOURCES: dict[str, TleSource] = json.loads((ROOT / "src/lib/sources.json").read_text("utf-8"))
+ORBIT_SOURCES: dict[str, OrbitSource] = json.loads((ROOT / "src/lib/sources.json").read_text("utf-8"))
