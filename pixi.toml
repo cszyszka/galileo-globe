@@ -1,0 +1,28 @@
+[workspace]
+name = "globe-visualization-data"
+channels = ["conda-forge"]
+platforms = ["linux-64", "osx-arm64", "osx-64"]
+
+[dependencies]
+python = "3.13.*"
+sgp4 = ">=2.24,<3"
+httpx = ">=0.28,<1"
+beautifulsoup4 = ">=4.13,<5"
+
+[feature.dev.dependencies]
+pytest = ">=8,<10"
+ruff = ">=0.8"
+mypy = ">=1.13"
+
+[environments]
+default = { features = [], solve-group = "default" }
+dev = { features = ["dev"], solve-group = "default" }
+
+[tasks]
+# Downloads TLEs and the Galileo service status into public/data/ (flags: --force, --if-stale, --accept-drop).
+refresh = "python -m data_refresh"
+
+[feature.dev.tasks]
+test = "pytest"
+lint = "ruff check . && ruff format --check ."
+typecheck = "mypy"

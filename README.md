@@ -20,6 +20,9 @@ npm install
 npm run dev
 ```
 
+The data refresh is written in Python and managed with [pixi](https://pixi.sh). `npm run dev` calls it
+to top up stale data; without pixi installed it falls back to the committed files.
+
 ## Scripts
 
 | Command | What it does |
@@ -30,7 +33,8 @@ npm run dev
 | `npm run typecheck` | Runs the TypeScript compiler without emitting |
 | `npm run lint` | Runs ESLint |
 | `npm test` | Runs the Vitest unit tests |
-| `npm run data:refresh` | Downloads TLEs and status into `public/data/` (`-- --force` ignores the 1-hour cache) |
+| `npm run data:refresh` | Downloads TLEs and status into `public/data/` (`-- --force` ignores the 1-hour cache); runs `pixi run refresh` |
+| `pixi run -e dev test` | Runs the Python tests (also `lint` and `typecheck` tasks) |
 
 TypeScript 7 does the type checking (`tsc`, installed as the `@typescript/native` alias). TypeScript 7
 has no JavaScript API yet, so the `typescript` package is Microsoft's TypeScript 6 compatibility build
@@ -47,7 +51,7 @@ supports TypeScript 7, `typescript` can move to 7 and the alias can go.
 | `src/globe/` | The d3 globe: SVG layers, the animation loop (`scene.ts`), camera, pointer input |
 | `src/hooks/` | Data loading, the simulated clock, the panel readout, the bottom sheet and other state |
 | `src/lib/` | Pure logic with unit tests: TLE parsing and propagation, geometry, sky view, formatting |
-| `scripts/` | The data refresh and its validation (run by `npm run data:refresh` and the scheduled workflow) |
+| `data_refresh/` | The Python data refresh and its validation (run by `pixi run refresh` and the scheduled workflow); tests in `tests/` |
 
 Each component imports its own stylesheet from next to it; `GalileoGlobe.css` holds the app shell
 and the small utilities shared by all of them.
@@ -58,7 +62,7 @@ The app reads static files from `public/data/` rather than calling CelesTrak or 
 the browser. The files are committed to the repo, and a scheduled GitHub Actions workflow
 (`.github/workflows/refresh-data.yml`) refreshes them every 6 hours and pushes any change.
 CelesTrak refuses downloads from Cloudflare's build servers, which is why the build does not
-fetch them itself. See `scripts/refresh-data.js` for the validation it applies; a failed
+fetch them itself. See `data_refresh/` for the validation it applies; a failed
 download keeps the previous file.
 
 ## Deployment

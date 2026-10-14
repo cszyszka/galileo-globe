@@ -1,0 +1,12 @@
+{
+  "galileo": {
+    "label": "Galileo",
+    "url": "https://celestrak.org/NORAD/elements/gp.php?GROUP=galileo&FORMAT=tle",
+    "file": "tle-galileo.txt"
+  },
+  "leopnt": {
+    "label": "LEO-PNT (Celeste)",
+    "url": "https://celestrak.org/NORAD/elements/gp.php?NAME=LPNTSAT&FORMAT=tle",
+    "file": "tle-leopnt.txt"
+  }
+}

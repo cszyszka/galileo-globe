@@ -1,5 +1,5 @@
 import { twoline2satrec, propagate, gstime, type SatRec, type EciVec3 } from 'satellite.js';
-import { TLE_SOURCES } from './sources.js';
+import TLE_SOURCES from './sources.json';
 
 export type Constellation = 'galileo' | 'leopnt';
 export type LayerKey = 'galileo' | 'galileoElliptical' | 'leopnt';
@@ -83,7 +83,7 @@ const LEO_PNT_GROUP = 4;
 const ECCENTRIC_GROUP = 3;
 
 // All runtime data is served as static files from public/data/, refreshed by
-// scripts/refresh-data.js (`npm run data:refresh`). `no-cache` makes the browser revalidate,
+// data_refresh/ (`npm run data:refresh`). `no-cache` makes the browser revalidate,
 // so a long-open page picks up new data after the site is redeployed.
 const DATA_URL = `${import.meta.env.BASE_URL}data/`;
 

@@ -1,0 +1,18 @@
+# Tool configuration only: dependencies are managed by pixi (pixi.toml).
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.mypy]
+files = ["data_refresh", "tests"]
+strict = true
+
+[[tool.mypy.overrides]]
+module = ["sgp4.*"]
+ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 110
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
