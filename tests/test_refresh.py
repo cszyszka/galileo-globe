@@ -59,3 +59,9 @@ def test_if_stale_waits_twelve_hours(tmp_path: Path) -> None:
     meta["sources"]["tle-x"]["fetchedAt"] = (NOW - timedelta(hours=13)).isoformat()
     (tmp_path / "meta.json").write_text(json.dumps(meta))
     assert refresh([failing_job()], tmp_path, if_stale=True, clock=lambda: NOW) == 1
+
+
+def test_forgets_sources_that_no_longer_exist(tmp_path: Path) -> None:
+    refresh([ok_job("tle-old")], tmp_path, clock=lambda: NOW)
+    refresh([ok_job("omm-new")], tmp_path, clock=lambda: NOW)
+    assert list(meta_of(tmp_path)["sources"]) == ["omm-new"]

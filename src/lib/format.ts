@@ -8,7 +8,7 @@ export function formatUtc(d: Date): string {
   return d.toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
 }
 
-// Minute precision is enough for a TLE epoch.
+// Minute precision is enough for an element-set epoch.
 export function formatEpoch(d: Date): string {
   return d.toISOString().slice(0, 16).replace('T', ' ');
 }

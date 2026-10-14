@@ -8,7 +8,7 @@ serves it as static files and visitors never hit CelesTrak or the GSC directly.
     pixi run refresh --accept-drop  # accept a big drop in satellite count (see validation.py)
 
 Output (public/data/):
-    tle-galileo.txt, tle-leopnt.txt   orbital elements from CelesTrak
+    omm-galileo.json, omm-leopnt.json orbital elements (OMM) from CelesTrak
     galileo-status.json               per-satellite service status from the GSC
     meta.json                         when each file was fetched, and any errors
 
@@ -29,8 +29,8 @@ from pathlib import Path
 import httpx
 
 from .galileo_status import GSC_URL, fetch_galileo_status, validate_galileo_status
-from .sources import ROOT, TLE_SOURCES
-from .tle import fetch_tle, validate_tle
+from .omm import dump_omm, fetch_omm, validate_omm
+from .sources import ORBIT_SOURCES, ROOT
 from .types import Meta, SourceMeta
 from .validation import DataError, Validated
 
@@ -65,13 +65,13 @@ def _now_iso(now: datetime) -> str:
     return now.isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
 
-def _tle_job(key: str, url: str, file: str) -> Job:
+def _omm_job(key: str, url: str, file: str) -> Job:
     def run(previous: int, accept_drop: bool) -> Result:
-        text = fetch_tle(url, user_agent=USER_AGENT)
-        validated = validate_tle(text, minimum=MIN_COUNT[key], previous=previous, accept_drop=accept_drop)
-        return Result(text, validated)
+        records = fetch_omm(url, user_agent=USER_AGENT)
+        validated = validate_omm(records, minimum=MIN_COUNT[key], previous=previous, accept_drop=accept_drop)
+        return Result(dump_omm(records), validated)
 
-    return Job(f"tle-{key}", file, url, run)
+    return Job(f"omm-{key}", file, url, run)
 
 
 def _status_job() -> Job:
@@ -86,7 +86,7 @@ def _status_job() -> Job:
 
 
 def build_jobs() -> list[Job]:
-    return [*(_tle_job(key, src["url"], src["file"]) for key, src in TLE_SOURCES.items()), _status_job()]
+    return [*(_omm_job(key, src["url"], src["file"]) for key, src in ORBIT_SOURCES.items()), _status_job()]
 
 
 def read_meta(out_dir: Path) -> Meta:
@@ -162,6 +162,8 @@ def refresh(
     # Nothing fetched: leave meta.json as it is, so a skipped run changes no files.
     if not ran:
         return 0
+    # Forget sources that no longer exist (e.g. the old TLE files), so meta.json describes the current set.
+    meta["sources"] = {key: src for key, src in meta["sources"].items() if key in {j.key for j in jobs}}
     meta["generatedAt"] = _now_iso(now)
     write_atomic(out_dir, META_FILE, json.dumps(meta, indent=2, ensure_ascii=False) + "\n")
     return 1 if failures else 0

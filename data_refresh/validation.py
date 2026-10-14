@@ -1,4 +1,4 @@
-"""Checks shared by the TLE and GSC status validators."""
+"""Checks shared by the OMM and GSC status validators."""
 
 from dataclasses import dataclass, field
 

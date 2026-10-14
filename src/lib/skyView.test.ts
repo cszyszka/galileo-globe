@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import galileoTle from './__fixtures__/galileo.tle?raw';
-import { lonLatRAt, parseTle } from './satellites';
+import galileoOmm from './__fixtures__/galileo.omm.json?raw';
+import { lonLatRAt, parseOmm } from './satellites';
 import type { GalileoStatus, Visibility } from './satellites';
 import { computeReadouts, computeSkyView } from './skyView';
 import type { SatReadout } from './skyView';
 
-const sats = parseTle(galileoTle, 'galileo');
+const sats = parseOmm(galileoOmm, 'galileo');
 const [sat] = sats;
 
 describe('computeReadouts', () => {

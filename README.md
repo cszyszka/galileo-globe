@@ -9,7 +9,7 @@ built with React, D3 and Vite. Spin and zoom the globe (drag and scroll, or drag
 phone), click a satellite for its position and status, or click the Earth to see which satellites
 are above the horizon from that spot.
 
-Orbits are propagated in the browser with satellite.js from TLEs published by
+Orbits are propagated in the browser with satellite.js from orbital elements (OMM) published by
 [CelesTrak](https://celestrak.org); per-satellite service status comes from the
 [European GNSS Service Centre](https://www.gsc-europa.eu/system-service-status/constellation-information).
 
@@ -33,7 +33,7 @@ to top up stale data; without pixi installed it falls back to the committed file
 | `npm run typecheck` | Runs the TypeScript compiler without emitting |
 | `npm run lint` | Runs ESLint |
 | `npm test` | Runs the Vitest unit tests |
-| `npm run data:refresh` | Downloads TLEs and status into `public/data/` (`-- --force` ignores the 1-hour cache); runs `pixi run refresh` |
+| `npm run data:refresh` | Downloads orbital elements and status into `public/data/` (`-- --force` ignores the 1-hour cache); runs `pixi run refresh` |
 | `pixi run -e dev test` | Runs the Python tests (also `lint` and `typecheck` tasks) |
 
 TypeScript 7 does the type checking (`tsc`, installed as the `@typescript/native` alias). TypeScript 7
@@ -50,7 +50,7 @@ supports TypeScript 7, `typescript` can move to 7 and the alias can go.
 | `src/components/` | Overlays on the globe (notices, legend, theme toggle), time controls, the sky plot |
 | `src/globe/` | The d3 globe: SVG layers, the animation loop (`scene.ts`), camera, pointer input |
 | `src/hooks/` | Data loading, the simulated clock, the panel readout, the bottom sheet and other state |
-| `src/lib/` | Pure logic with unit tests: TLE parsing and propagation, geometry, sky view, formatting |
+| `src/lib/` | Pure logic with unit tests: OMM parsing and propagation, geometry, sky view, formatting |
 | `data_refresh/` | The Python data refresh and its validation (run by `pixi run refresh` and the scheduled workflow); tests in `tests/` |
 
 Each component imports its own stylesheet from next to it; `GalileoGlobe.css` holds the app shell

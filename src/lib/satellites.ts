@@ -1,5 +1,5 @@
-import { twoline2satrec, propagate, gstime, type SatRec, type EciVec3 } from 'satellite.js';
-import TLE_SOURCES from './sources.json';
+import { json2satrec, propagate, gstime, type OMMJsonObject, type SatRec, type EciVec3 } from 'satellite.js';
+import ORBIT_SOURCES from './sources.json';
 
 export type Constellation = 'galileo' | 'leopnt';
 export type LayerKey = 'galileo' | 'galileoElliptical' | 'leopnt';
@@ -66,7 +66,7 @@ export type Vec3 = [number, number, number];
 
 export const EARTH_RADIUS_KM = 6371;
 
-export const SOURCES: Record<string, { label: string; url: string; file: string }> = TLE_SOURCES;
+export const SOURCES: Record<string, { label: string; url: string; file: string }> = ORBIT_SOURCES;
 
 // Group indices used for colouring and the side-panel sections.
 export const GROUP_NAMES = ['Galileo plane 1', 'Galileo plane 2', 'Galileo plane 3', 'Galileo elliptical orbit', 'LEO-PNT (Celeste)'];
@@ -102,7 +102,7 @@ export async function loadDataMeta(): Promise<DataMeta> {
   }
 }
 
-export async function loadTle(sourceKey: string): Promise<string> {
+export async function loadOmm(sourceKey: string): Promise<string> {
   return (await fetchData(SOURCES[sourceKey].file)).text();
 }
 
@@ -160,16 +160,20 @@ export function isShown(sat: Satellite, { layers, showUnusable, statusData }: Vi
   return layers[sat.layer] !== false && (showUnusable || healthOf(sat, statusData).category !== 'bad');
 }
 
-export function parseTle(text: string, constellation: Constellation): Satellite[] {
-  const lines = text.split(/\r?\n/).map(l => l.trimEnd()).filter(Boolean);
-  const sats: Satellite[] = [];
-  for (let i = 0; i + 2 < lines.length; i++) {
-    const [name, l1, l2] = [lines[i].trim(), lines[i + 1], lines[i + 2]];
-    if (!l1.startsWith('1 ') || !l2.startsWith('2 ')) continue;
-    i += 2;
-    const satrec = twoline2satrec(l1, l2);
+// OMM (CelesTrak JSON) gives the epoch in UTC without a zone suffix.
+function ommEpoch(record: OMMJsonObject): Date {
+  return new Date(record.EPOCH.endsWith('Z') ? record.EPOCH : `${record.EPOCH}Z`);
+}
+
+// Builds a satellite from one OMM record, or null if the record is unusable.
+function satelliteFromOmm(record: OMMJsonObject, constellation: Constellation): Satellite | null {
+  try {
+    const name = String(record.OBJECT_NAME).trim();
+    const satrec = json2satrec(record);
+    const epoch = ommEpoch(record);
+    if (!name || satrec.error || Number.isNaN(epoch.getTime())) return null;
     const match = name.match(/^(\S+)\s*\((.+)\)$/);
-    sats.push({
+    return {
       id: satrec.satnum,
       plane: 0,
       elliptical: false,
@@ -184,9 +188,26 @@ export function parseTle(text: string, constellation: Constellation): Satellite[
       raan: (satrec.nodeo * 180) / Math.PI,
       eccentricity: satrec.ecco,
       periodMin: (2 * Math.PI) / satrec.no,
-      epoch: epochToDate(satrec),
-    });
+      epoch,
+    };
+  } catch {
+    return null;
   }
+}
+
+// Parses a CelesTrak OMM JSON file. Anything that isn't a list of usable records is skipped.
+export function parseOmm(text: string, constellation: Constellation): Satellite[] {
+  let records: unknown;
+  try {
+    records = JSON.parse(text);
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(records)) return [];
+  const sats = records.flatMap(r => {
+    const sat = r && typeof r === 'object' ? satelliteFromOmm(r as OMMJsonObject, constellation) : null;
+    return sat ? [sat] : [];
+  });
   if (constellation === 'galileo') {
     assignPlanes(sats);
   } else {
@@ -201,11 +222,6 @@ export function parseTle(text: string, constellation: Constellation): Satellite[
 
 export function sortSats(sats: Satellite[]): Satellite[] {
   return [...sats].sort((a, b) => a.plane - b.plane || a.short.localeCompare(b.short));
-}
-
-function epochToDate(satrec: SatRec): Date {
-  const year = satrec.epochyr < 57 ? 2000 + satrec.epochyr : 1900 + satrec.epochyr;
-  return new Date(Date.UTC(year, 0, 1) + (satrec.epochdays - 1) * 86400000);
 }
 
 // Galileo uses three orbital planes 120° apart in RAAN. The two satellites launched into
