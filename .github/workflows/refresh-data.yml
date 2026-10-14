@@ -20,17 +20,16 @@ jobs:
     permissions:
       contents: write
     steps:
-      # The write token is not saved in the checkout and npm install scripts don't run, so code
-      # from dependencies never sees it; only the final push step gets it.
+      # The write token is not saved in the checkout, so code from dependencies never sees it;
+      # only the final push step gets it.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      - uses: prefix-dev/setup-pixi@9dabb60412d3d2d967a8d682f7ce01317af40514 # v0.11.0
         with:
-          node-version: 22
-          cache: npm
-      - run: npm ci --ignore-scripts
-      - run: npm run data:refresh -- --force
+          pixi-version: v0.55.0
+          locked: true
+      - run: pixi run refresh --force
       - name: Commit and push if changed
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
