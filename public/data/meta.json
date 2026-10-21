@@ -3,21 +3,21 @@
     "galileo-status": {
       "file": "galileo-status.json",
       "url": "https://www.gsc-europa.eu/system-service-status/constellation-information",
-      "fetchedAt": "2026-10-20T21:39:32.706Z",
+      "fetchedAt": "2026-10-21T04:52:45.248Z",
       "count": 32
     },
     "omm-galileo": {
       "file": "omm-galileo.json",
       "url": "https://celestrak.org/NORAD/elements/gp.php?GROUP=galileo&FORMAT=json",
-      "fetchedAt": "2026-10-20T21:39:30.656Z",
+      "fetchedAt": "2026-10-21T04:52:43.241Z",
       "count": 32
     },
     "omm-leopnt": {
       "file": "omm-leopnt.json",
       "url": "https://celestrak.org/NORAD/elements/gp.php?NAME=LPNTSAT&FORMAT=json",
-      "fetchedAt": "2026-10-20T21:39:31.217Z",
+      "fetchedAt": "2026-10-21T04:52:43.581Z",
       "count": 2
     }
   },
-  "generatedAt": "2026-10-20T21:39:29.982Z"
+  "generatedAt": "2026-10-21T04:52:42.749Z"
 }
