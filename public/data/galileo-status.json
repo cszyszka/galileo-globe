@@ -1,6 +1,6 @@
 {
   "source": "https://www.gsc-europa.eu/system-service-status/constellation-information",
-  "fetchedAt": "2026-11-17T07:57:50.688Z",
+  "fetchedAt": "2026-11-17T20:57:58.835Z",
   "satellites": {
     "GSAT0101": {
       "svid": "E11",
@@ -80,8 +80,13 @@
     "GSAT0209": {
       "svid": "E09",
       "clock": "RAFS",
-      "status": "USABLE",
-      "nagu": null
+      "status": "NOT USABLE",
+      "nagu": {
+        "id": "2026048",
+        "type": "UNP_UNUFN",
+        "subject": "UNAVAILABLE FROM 2026-11-17 UNTIL FURTHER NOTICE",
+        "url": "https://www.gsc-europa.eu/sites/default/files/sites/all/files/NOTICE_ADVISORY_TO_GALILEO_USERS_NAGU_2026048.txt"
+      }
     },
     "GSAT0210": {
       "svid": "E01",
