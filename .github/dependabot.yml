@@ -14,6 +14,10 @@ updates:
       # the `@typescript/native` alias. Drop this when typescript-eslint supports TypeScript 7.
       - dependency-name: typescript
         update-types: [version-update:semver-major]
+      # typescript-eslint 8.74+ adds an optional `@typescript/native` peer that resolves to a moving
+      # TypeScript dev build, which breaks `npm ci`. Held at ~8.72.2 in package.json; drop this once fixed.
+      - dependency-name: typescript-eslint
+        versions: ['>=8.73.0']
 
   - package-ecosystem: github-actions
     directory: /
